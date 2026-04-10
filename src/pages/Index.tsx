@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import UploadScreen from "@/components/UploadScreen";
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
