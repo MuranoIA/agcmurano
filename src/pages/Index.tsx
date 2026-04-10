@@ -61,6 +61,17 @@ const Dashboard: React.FC = () => {
     return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
   }
 
+  if (!csvLoaded && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader onNewUpload={handleNewUpload} />
+        <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
+          Aguardando o administrador carregar os dados...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} />
