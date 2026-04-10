@@ -8,6 +8,7 @@ import {
   fetchOverlayVisitas,
   dbSetVendedor,
   dbSetValorMes,
+  clearOverlayEdits,
   dbAddVisita,
   dbRemoveVisita,
   subscribeToOverlayChanges,
@@ -83,11 +84,12 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setLoading(true);
     try {
       const { clientes: parsed, mesesCols: cols } = parseCSV(text);
-      await upsertClientes(parsed);
+      await Promise.all([upsertClientes(parsed), clearOverlayEdits()]);
       setRawClientes(parsed);
       setMesesCols(cols);
+      setOverlay(prev => ({ vendedores: {}, valores_mes: {}, visitas: prev.visitas }));
       setCsvLoaded(true);
-      toast.success(`${parsed.length} clientes carregados no banco`);
+      toast.success(`${parsed.length} clientes carregados — edições anteriores limpas`);
     } catch (err: any) {
       toast.error("Erro ao salvar CSV: " + (err.message || err));
       throw err;

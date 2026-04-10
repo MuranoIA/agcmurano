@@ -44,6 +44,13 @@ export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols:
   return { clientes, mesesCols };
 }
 
+export async function clearOverlayEdits(): Promise<void> {
+  await Promise.all([
+    supabase.from("overlay_vendedores").delete().neq("codigo", "___impossible___"),
+    supabase.from("overlay_valores_mes").delete().neq("codigo", "___impossible___"),
+  ]);
+}
+
 export async function upsertClientes(clientes: Cliente[]): Promise<void> {
   // Delete all existing then insert (simple full-replace on CSV upload)
   await supabase.from("clientes").delete().neq("codigo", "___impossible___");
