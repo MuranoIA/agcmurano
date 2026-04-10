@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import UploadScreen from "@/components/UploadScreen";
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
@@ -17,6 +18,7 @@ import { Download, Loader2 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
+  const { isAdmin } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
@@ -55,8 +57,19 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (!csvLoaded || showUpload) {
+  if ((!csvLoaded || showUpload) && isAdmin) {
     return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
+  }
+
+  if (!csvLoaded && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader onNewUpload={handleNewUpload} />
+        <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
+          Aguardando o administrador carregar os dados...
+        </div>
+      </div>
+    );
   }
 
   return (
