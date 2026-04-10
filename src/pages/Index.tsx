@@ -18,6 +18,7 @@ import { Download, Loader2 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
+  const { isAdmin } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
@@ -56,7 +57,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (!csvLoaded || showUpload) {
+  if ((!csvLoaded || showUpload) && isAdmin) {
     return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
   }
 
