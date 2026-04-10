@@ -3,7 +3,6 @@ import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { heatmapColor } from "@/lib/heatmapColors";
 import { fmtBRLShort } from "@/lib/format";
-import { setValorMes, getOverlay } from "@/lib/overlayStore";
 import { Pencil } from "lucide-react";
 
 interface Props {
@@ -11,17 +10,15 @@ interface Props {
 }
 
 const HeatmapTable: React.FC<Props> = ({ clientes }) => {
-  const { mesesCols, refreshFromOverlay } = useAppData();
+  const { mesesCols, overlay, setValorMes } = useAppData();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const overlay = getOverlay();
 
   const commitEdit = (codigo: string) => {
     const val = parseFloat(editValue.replace(",", ".")) || 0;
     setValorMes(codigo, lastMonth, val);
     setEditingCell(null);
-    refreshFromOverlay();
   };
 
   return (

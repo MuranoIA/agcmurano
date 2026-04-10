@@ -1,7 +1,6 @@
 import React from "react";
 import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
-import { getOverlay, setVendedor } from "@/lib/overlayStore";
 import { VENDEDORES } from "@/lib/types";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import { heatmapColor } from "@/lib/heatmapColors";
@@ -15,8 +14,7 @@ interface Props {
 }
 
 const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
-  const { mesesCols, refreshFromOverlay } = useAppData();
-  const overlay = getOverlay();
+  const { mesesCols, overlay, visitas, setVendedor } = useAppData();
 
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const last3 = mesesCols.slice(-3);
@@ -32,7 +30,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
   if (c.Objetivo_R$ > 0 && (c.meses[lastMonth] || 0) < c.Objetivo_R$) insights.push("🎯 Abaixo do objetivo no último mês");
   if (c.Objetivo_R$ > 0 && (c.meses[lastMonth] || 0) >= c.Objetivo_R$) insights.push("🎯 Atingiu o objetivo no último mês");
 
-  const visitas = overlay.visitas.filter(v => v.codigo === c.Codigo);
+  const clienteVisitas = visitas.filter(v => v.codigo === c.Codigo);
 
   return (
     <div className="fixed inset-0 z-50 bg-foreground/40 flex justify-end" onClick={onClose}>
@@ -49,14 +47,13 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Vendedor + Próxima ação */}
           <div className="flex items-center gap-4">
             <div>
               <span className="text-xs text-muted-foreground">Vendedor</span>
               {c.Vendedor ? (
                 <div className="font-medium">{c.Vendedor}</div>
               ) : (
-                <select className="border rounded px-2 py-1 text-sm bg-card" onChange={e => { setVendedor(c.Codigo, e.target.value); refreshFromOverlay(); }} defaultValue="">
+                <select className="border rounded px-2 py-1 text-sm bg-card" onChange={e => setVendedor(c.Codigo, e.target.value)} defaultValue="">
                   <option value="" disabled>Atribuir</option>
                   {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
@@ -68,7 +65,6 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
             </div>
           </div>
 
-          {/* Grid indicadores */}
           <div className="grid grid-cols-3 gap-3">
             {[
               ["TM/Mês", fmtBRL(c.TM_Mes)],
@@ -88,7 +84,6 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
             ))}
           </div>
 
-          {/* Insights */}
           {insights.length > 0 && (
             <div className="space-y-1">
               <h4 className="font-semibold text-sm mb-2">Interpretação</h4>
@@ -98,7 +93,6 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
             </div>
           )}
 
-          {/* Mini heatmap */}
           <div>
             <h4 className="font-semibold text-sm mb-2">Faturamento Mensal</h4>
             <div className="grid grid-cols-4 gap-1">
@@ -115,12 +109,11 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
             </div>
           </div>
 
-          {/* Visitas */}
-          {visitas.length > 0 && (
+          {clienteVisitas.length > 0 && (
             <div>
               <h4 className="font-semibold text-sm mb-2">Histórico de Visitas</h4>
               <div className="space-y-2">
-                {visitas.map((v, i) => (
+                {clienteVisitas.map((v, i) => (
                   <div key={i} className="text-sm bg-muted/30 rounded p-2">
                     <span className="font-medium">{v.data} {v.hora}</span> — {v.vendedor}
                     {v.teve_venda && " ✅ venda"}

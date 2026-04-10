@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clientes: {
+        Row: {
+          ciclo_medio_d: number | null
+          codigo: string
+          created_at: string
+          dias_para_acao: number | null
+          dias_sem_compra: number | null
+          fat_total: number | null
+          id: string
+          mcc: number | null
+          meses: Json
+          meses_1a_compra: number | null
+          n_pedidos: number | null
+          nome: string
+          objetivo_rs: number | null
+          primeira_compra: string | null
+          proxima_acao: string | null
+          status: string | null
+          tm_mes: number | null
+          tm_pedido: number | null
+          ultima_compra: string | null
+          updated_at: string
+          vendedor: string | null
+        }
+        Insert: {
+          ciclo_medio_d?: number | null
+          codigo: string
+          created_at?: string
+          dias_para_acao?: number | null
+          dias_sem_compra?: number | null
+          fat_total?: number | null
+          id?: string
+          mcc?: number | null
+          meses?: Json
+          meses_1a_compra?: number | null
+          n_pedidos?: number | null
+          nome: string
+          objetivo_rs?: number | null
+          primeira_compra?: string | null
+          proxima_acao?: string | null
+          status?: string | null
+          tm_mes?: number | null
+          tm_pedido?: number | null
+          ultima_compra?: string | null
+          updated_at?: string
+          vendedor?: string | null
+        }
+        Update: {
+          ciclo_medio_d?: number | null
+          codigo?: string
+          created_at?: string
+          dias_para_acao?: number | null
+          dias_sem_compra?: number | null
+          fat_total?: number | null
+          id?: string
+          mcc?: number | null
+          meses?: Json
+          meses_1a_compra?: number | null
+          n_pedidos?: number | null
+          nome?: string
+          objetivo_rs?: number | null
+          primeira_compra?: string | null
+          proxima_acao?: string | null
+          status?: string | null
+          tm_mes?: number | null
+          tm_pedido?: number | null
+          ultima_compra?: string | null
+          updated_at?: string
+          vendedor?: string | null
+        }
+        Relationships: []
+      }
+      overlay_valores_mes: {
+        Row: {
+          codigo: string
+          created_at: string
+          id: string
+          mes: string
+          valor: number
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          id?: string
+          mes: string
+          valor: number
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          id?: string
+          mes?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      overlay_vendedores: {
+        Row: {
+          codigo: string
+          created_at: string
+          id: string
+          vendedor: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          id?: string
+          vendedor: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          id?: string
+          vendedor?: string
+        }
+        Relationships: []
+      }
+      overlay_visitas: {
+        Row: {
+          codigo: string
+          created_at: string
+          data: string
+          hora: string
+          id: string
+          nome: string
+          observacao: string | null
+          teve_venda: boolean
+          vendedor: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          data: string
+          hora: string
+          id?: string
+          nome: string
+          observacao?: string | null
+          teve_venda?: boolean
+          vendedor: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          data?: string
+          hora?: string
+          id?: string
+          nome?: string
+          observacao?: string | null
+          teve_venda?: boolean
+          vendedor?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

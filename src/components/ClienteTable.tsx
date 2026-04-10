@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
-import { setValorMes, setVendedor, getOverlay } from "@/lib/overlayStore";
 import { VENDEDORES } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
 import { ArrowUpDown, Pencil } from "lucide-react";
@@ -15,14 +14,12 @@ interface Props {
 type SortKey = keyof Cliente | "lastMonth";
 
 const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
-  const { mesesCols, refreshFromOverlay } = useAppData();
+  const { mesesCols, overlay, setVendedor, setValorMes } = useAppData();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
   const [sortAsc, setSortAsc] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-
-  const overlay = getOverlay();
 
   const sorted = useMemo(() => {
     return [...clientes].sort((a, b) => {
@@ -59,7 +56,6 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
 
   const handleVendedorChange = (codigo: string, v: string) => {
     setVendedor(codigo, v);
-    refreshFromOverlay();
   };
 
   const startEdit = (codigo: string, currentVal: number) => {
@@ -71,7 +67,6 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
     const val = parseFloat(editValue.replace(",", ".")) || 0;
     setValorMes(codigo, lastMonth, val);
     setEditingCell(null);
-    refreshFromOverlay();
   };
 
   const isEdited = (codigo: string) => !!overlay.valores_mes[codigo]?.[lastMonth];
