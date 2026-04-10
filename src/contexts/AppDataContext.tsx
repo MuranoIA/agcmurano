@@ -8,6 +8,7 @@ import {
   fetchOverlayVisitas,
   dbSetVendedor,
   dbSetValorMes,
+  clearOverlayEdits,
   dbAddVisita,
   dbRemoveVisita,
   subscribeToOverlayChanges,
