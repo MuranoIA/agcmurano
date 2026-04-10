@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
-import { getOverlay, addVisita, removeVisita } from "@/lib/overlayStore";
 import { VENDEDORES, Visita } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +11,7 @@ import { toast } from "sonner";
 import { downloadFile, exportCSV } from "@/lib/format";
 
 const RegistroVisitas: React.FC = () => {
-  const { clientes, refreshFromOverlay } = useAppData();
-  const overlay = getOverlay();
+  const { clientes, visitas, addVisita, removeVisita } = useAppData();
 
   const [search, setSearch] = useState("");
   const [selectedCodigo, setSelectedCodigo] = useState("");
@@ -23,7 +21,6 @@ const RegistroVisitas: React.FC = () => {
   const [teveVenda, setTeveVenda] = useState(false);
   const [obs, setObs] = useState("");
 
-  // Filters
   const [filtroVendedor, setFiltroVendedor] = useState("Todos");
   const [filtroDataIni, setFiltroDataIni] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
@@ -43,7 +40,7 @@ const RegistroVisitas: React.FC = () => {
     }
   };
 
-  const registrar = () => {
+  const registrar = async () => {
     if (!selectedCodigo) { toast.error("Selecione um cliente"); return; }
     if (!vendedor) { toast.error("Selecione um vendedor"); return; }
     const c = clientes.find(cl => cl.Codigo === selectedCodigo);
@@ -57,22 +54,19 @@ const RegistroVisitas: React.FC = () => {
       teve_venda: teveVenda,
       observacao: obs,
     };
-    addVisita(visita);
-    refreshFromOverlay();
+    await addVisita(visita);
     setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
     toast.success("Visita registrada!");
   };
 
-  const handleRemove = (idx: number) => {
+  const handleRemove = async (id: string) => {
     if (confirm("Remover este registro de visita?")) {
-      removeVisita(idx);
-      refreshFromOverlay();
+      await removeVisita(id);
     }
   };
 
   const filteredVisitas = useMemo(() => {
-    let list = [...overlay.visitas].map((v, i) => ({ ...v, _idx: i }));
-    list.reverse();
+    let list = [...visitas];
     if (filtroVendedor !== "Todos") list = list.filter(v => v.vendedor === filtroVendedor);
     if (filtroDataIni) {
       const [y, m, d] = filtroDataIni.split("-");
@@ -85,7 +79,7 @@ const RegistroVisitas: React.FC = () => {
       list = list.filter(v => v.data <= fim);
     }
     return list;
-  }, [overlay.visitas, filtroVendedor, filtroDataIni, filtroDataFim]);
+  }, [visitas, filtroVendedor, filtroDataIni, filtroDataFim]);
 
   const exportarHistorico = () => {
     const headers = ["Data", "Hora", "Cliente", "Vendedor", "Houve Venda", "Observacao"];
@@ -95,7 +89,6 @@ const RegistroVisitas: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Formulário */}
       <div className="bg-card rounded-lg shadow-sm border p-6">
         <h3 className="font-semibold mb-4">Registrar Visita</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -143,7 +136,6 @@ const RegistroVisitas: React.FC = () => {
         </Button>
       </div>
 
-      {/* Histórico */}
       <div className="bg-card rounded-lg shadow-sm border p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Histórico de Visitas ({filteredVisitas.length})</h3>
@@ -174,7 +166,7 @@ const RegistroVisitas: React.FC = () => {
             </thead>
             <tbody>
               {filteredVisitas.map((v) => (
-                <tr key={v._idx} className="border-b hover:bg-muted/20">
+                <tr key={v.id || `${v.data}-${v.hora}-${v.codigo}`} className="border-b hover:bg-muted/20">
                   <td className="px-3 py-2">{v.data}</td>
                   <td className="px-3 py-2">{v.hora}</td>
                   <td className="px-3 py-2">{v.nome}</td>
@@ -182,9 +174,11 @@ const RegistroVisitas: React.FC = () => {
                   <td className="px-3 py-2 text-center">{v.teve_venda ? "✅" : "—"}</td>
                   <td className="px-3 py-2 text-xs max-w-[200px] truncate">{v.observacao}</td>
                   <td className="px-3 py-2 text-center">
-                    <Button variant="ghost" size="sm" onClick={() => handleRemove(v._idx)}>
-                      <Trash2 size={14} className="text-destructive" />
-                    </Button>
+                    {v.id && (
+                      <Button variant="ghost" size="sm" onClick={() => handleRemove(v.id!)}>
+                        <Trash2 size={14} className="text-destructive" />
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}

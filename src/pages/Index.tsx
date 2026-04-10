@@ -10,14 +10,13 @@ import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
 import ClientePanel from "@/components/ClientePanel";
 import { Cliente } from "@/lib/types";
-import { isStorageAvailable } from "@/lib/overlayStore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
-  const { clientes, mesesCols, csvLoaded, loadCSV } = useAppData();
+  const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
@@ -48,18 +47,21 @@ const Dashboard: React.FC = () => {
     downloadFile(exportCSV(headers, rows), "grandes_contas_export.csv");
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    );
+  }
+
   if (!csvLoaded || showUpload) {
-    return <UploadScreen onFileLoad={(text) => { loadCSV(text); setShowUpload(false); }} />;
+    return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
   }
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} />
-      {!isStorageAvailable() && (
-        <div className="bg-accent/10 text-accent text-center text-sm py-2">
-          ⚠️ Salvamento local indisponível — use exportar overlay para não perder edições
-        </div>
-      )}
       <div className="container px-4 py-4">
         <KPIBar />
         <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
