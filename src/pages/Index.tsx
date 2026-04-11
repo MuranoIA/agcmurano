@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
 import Filters from "@/components/Filters";
+import PeriodFilter from "@/components/PeriodFilter";
 import ClienteTable from "@/components/ClienteTable";
 import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
@@ -18,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
+import { parseMesCol } from "@/lib/parseMesCol";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading } = useAppData();
@@ -26,13 +28,13 @@ const Dashboard: React.FC = () => {
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  
   const [showNovoCliente, setShowNovoCliente] = useState(false);
+  const [periodFrom, setPeriodFrom] = useState<Date | undefined>(undefined);
+  const [periodTo, setPeriodTo] = useState<Date | undefined>(undefined);
 
   const filtered = useMemo(() => {
     let list = clientes;
-    if (vendedor === "Sem vendedor") list = list.filter(c => !c.Vendedor);
-    else if (vendedor !== "Todos") list = list.filter(c => c.Vendedor === vendedor);
+    if (vendedor !== "Todos") list = list.filter(c => c.Vendedor === vendedor);
     if (status !== "Todos") list = list.filter(c => c.Status === status);
     if (busca) {
       const term = busca.toLowerCase();
@@ -41,7 +43,23 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientes, vendedor, status, busca]);
 
+  const filteredMesesCols = useMemo(() => {
+    if (!periodFrom && !periodTo) return mesesCols;
+    return mesesCols.filter(m => {
+      const d = parseMesCol(m);
+      if (!d) return true;
+      if (periodFrom && d < periodFrom) return false;
+      if (periodTo && d > periodTo) return false;
+      return true;
+    });
+  }, [mesesCols, periodFrom, periodTo]);
+
   const handleNewUpload = useCallback(() => {}, []);
+
+  const handleResetPeriod = useCallback(() => {
+    setPeriodFrom(undefined);
+    setPeriodTo(undefined);
+  }, []);
 
   const exportAll = () => {
     const headers = ["Codigo", "Nome", "Vendedor", "Status", "TM_Mes", "Objetivo_R$", "Ciclo_Medio_d", "MCC", "Dias_Sem_Compra", "Proxima_Acao", "Fat_Total", ...mesesCols];
@@ -81,8 +99,9 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} />
       <div className="container px-4 py-4">
-        <KPIBar clientes={filtered} />
+        <KPIBar clientes={filtered} mesesCols={filteredMesesCols} />
         <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
+        <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={handleResetPeriod} />
 
         <Tabs defaultValue={role === "admin" ? "visao" : "clientes"} className="mt-2">
           <div className="flex items-center justify-between mb-3">
@@ -101,7 +120,7 @@ const Dashboard: React.FC = () => {
 
           {role === "admin" && (
             <TabsContent value="visao">
-              <VisaoGeral clientes={filtered} />
+              <VisaoGeral clientes={filtered} mesesCols={filteredMesesCols} />
             </TabsContent>
           )}
 
@@ -116,7 +135,7 @@ const Dashboard: React.FC = () => {
             <ClienteTable clientes={filtered} onSelect={setSelectedCliente} />
           </TabsContent>
           <TabsContent value="heatmap">
-            <HeatmapTable clientes={filtered} />
+            <HeatmapTable clientes={filtered} mesesCols={filteredMesesCols} />
           </TabsContent>
           <TabsContent value="agenda">
             <AgendaVisitas clientes={filtered} />

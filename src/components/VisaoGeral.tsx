@@ -6,19 +6,26 @@ import { AlertTriangle, Users, XCircle } from "lucide-react";
 
 interface Props {
   clientes: Cliente[];
+  mesesCols?: string[];
 }
 
-const VisaoGeral: React.FC<Props> = ({ clientes }) => {
+const VisaoGeral: React.FC<Props> = ({ clientes, mesesCols }) => {
   const vendedorStats = VENDEDORES.map(v => {
     const list = clientes.filter(c => c.Vendedor === v);
+    const fatTotal = mesesCols && mesesCols.length > 0
+      ? list.reduce((s, c) => s + mesesCols.reduce((ms, m) => ms + (c.meses[m] || 0), 0), 0)
+      : list.reduce((s, c) => s + c.Fat_Total, 0);
+    const tmMesAvg = mesesCols && mesesCols.length > 0 && list.length
+      ? fatTotal / mesesCols.length / list.length
+      : list.length ? list.reduce((s, c) => s + c.TM_Mes, 0) / list.length : 0;
     return {
       nome: v,
       total: list.length,
-      fatTotal: list.reduce((s, c) => s + c.Fat_Total, 0),
+      fatTotal,
       ativos: list.filter(c => c.Status === "Ativo").length,
       risco: list.filter(c => c.Status === "Risco").length,
       inativos: list.filter(c => c.Status === "Inativo").length,
-      tmMesAvg: list.length ? list.reduce((s, c) => s + c.TM_Mes, 0) / list.length : 0,
+      tmMesAvg,
     };
   });
 

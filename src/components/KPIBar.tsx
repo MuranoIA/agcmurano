@@ -1,15 +1,28 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { fmtBRL } from "@/lib/format";
 import { Cliente } from "@/lib/types";
 
 interface KPIBarProps {
   clientes: Cliente[];
+  mesesCols?: string[];
 }
 
-const KPIBar: React.FC<KPIBarProps> = ({ clientes }) => {
+const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
   const total = clientes.length;
-  const fatTotal = clientes.reduce((s, c) => s + c.Fat_Total, 0);
-  const tmMesAvg = total ? clientes.reduce((s, c) => s + c.TM_Mes, 0) / total : 0;
+
+  const fatTotal = useMemo(() => {
+    if (!mesesCols || mesesCols.length === 0) return clientes.reduce((s, c) => s + c.Fat_Total, 0);
+    return clientes.reduce((s, c) => {
+      return s + mesesCols.reduce((ms, m) => ms + (c.meses[m] || 0), 0);
+    }, 0);
+  }, [clientes, mesesCols]);
+
+  const tmMesAvg = useMemo(() => {
+    if (!mesesCols || mesesCols.length === 0 || total === 0)
+      return total ? clientes.reduce((s, c) => s + c.TM_Mes, 0) / total : 0;
+    return total ? fatTotal / mesesCols.length / total : 0;
+  }, [clientes, mesesCols, fatTotal, total]);
+
   const ativos = clientes.filter(c => c.Status === "Ativo").length;
   const risco = clientes.filter(c => c.Status === "Risco").length;
   const inativos = clientes.filter(c => c.Status === "Inativo").length;
