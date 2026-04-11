@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface Props {
   clientes: Cliente[];
+  mesesCols?: string[];
 }
 
-const HeatmapTable: React.FC<Props> = ({ clientes }) => {
-  const { mesesCols } = useAppData();
+const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) => {
+  const ctx = useAppData();
+  const mesesCols = mesesColsProp || ctx.mesesCols;
   const [filterMes, setFilterMes] = useState("Todos");
   const [filterCondicao, setFilterCondicao] = useState("Todos");
 
