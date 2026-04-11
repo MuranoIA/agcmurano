@@ -1,5 +1,5 @@
 import React from "react";
-import { Upload, Download, LogOut } from "lucide-react";
+import { Upload, Download, LogOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadJSON } from "@/lib/format";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ interface Props {
 }
 
 const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
-  const { csvLoaded, overlay } = useAppData();
+  const { csvLoaded, overlay, forceApiRefresh } = useAppData();
   const { signOut, user, role } = useAuth();
 
   const handleExportOverlay = () => {
@@ -36,6 +36,11 @@ const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
           {csvLoaded && role === "admin" && (
             <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleExportOverlay}>
               <Download size={16} className="mr-1" /> Exportar overlay
+            </Button>
+          )}
+          {csvLoaded && (
+            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={forceApiRefresh}>
+              <RefreshCw size={16} className="mr-1" /> Atualizar agora
             </Button>
           )}
           <span className="text-xs text-primary-foreground/70 hidden sm:inline">{user?.email}</span>
