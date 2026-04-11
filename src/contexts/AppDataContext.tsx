@@ -22,6 +22,7 @@ interface AppState {
   overlay: OverlayStore;
   visitas: (Visita & { id?: string })[];
   loading: boolean;
+  apiCodigos: Set<string>;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
@@ -52,6 +53,32 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiOverlay, setApiOverlay] = useState<Record<string, number>>({});
+  const [apiCodigos, setApiCodigos] = useState<Set<string>>(new Set());
+
+  const fetchApiFaturamento = useCallback(async () => {
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/fetch-faturamento`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!Array.isArray(data)) return;
+
+      const totals: Record<string, number> = {};
+      data.forEach((item: any) => {
+        if (item.tipo === "VENDA" && item.codigo_cliente) {
+          const code = String(item.codigo_cliente);
+          totals[code] = (totals[code] || 0) + (Number(item.valor) || 0);
+        }
+      });
+      setApiOverlay(totals);
+      setApiCodigos(new Set(Object.keys(totals)));
+    } catch (err) {
+      console.warn("API faturamento indisponível:", err);
+    }
+  }, []);
 
   const refreshData = useCallback(async () => {
     try {
@@ -80,6 +107,14 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     return unsub;
   }, [refreshData]);
+
+  // Fetch API faturamento after data is loaded, then every 5 min
+  useEffect(() => {
+    if (!csvLoaded) return;
+    fetchApiFaturamento();
+    const interval = setInterval(fetchApiFaturamento, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [csvLoaded, fetchApiFaturamento]);
 
   const loadCSV = useCallback(async (text: string) => {
     setLoading(true);
@@ -136,11 +171,20 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const clientes = useMemo(() => {
     let list = applyOverlay(rawClientes, overlay);
+    // Apply API faturamento overlay for Abr/26
+    if (Object.keys(apiOverlay).length > 0) {
+      list = list.map(c => {
+        if (apiOverlay[c.Codigo] !== undefined) {
+          return { ...c, meses: { ...c.meses, "Abr/26": apiOverlay[c.Codigo] } };
+        }
+        return c;
+      });
+    }
     if (role === "vendedor" && vendorName) {
       list = list.filter(c => c.Vendedor === vendorName);
     }
     return list;
-  }, [rawClientes, overlay, role, vendorName]);
+  }, [rawClientes, overlay, apiOverlay, role, vendorName]);
 
   return (
     <Ctx.Provider value={{
@@ -150,6 +194,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       overlay,
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
+      apiCodigos,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,
