@@ -16,7 +16,7 @@ import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { downloadFile, exportCSV } from "@/lib/format";
+import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
 import { parseMesCol } from "@/lib/parseMesCol";
@@ -32,8 +32,11 @@ const Dashboard: React.FC = () => {
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(undefined);
   const [periodTo, setPeriodTo] = useState<Date | undefined>(undefined);
 
+  const clientesCapital = useMemo(() => clientes.filter(c => c.Segmento !== "interior"), [clientes]);
+  const clientesInterior = useMemo(() => clientes.filter(c => c.Segmento === "interior"), [clientes]);
+
   const filtered = useMemo(() => {
-    let list = clientes;
+    let list = clientesCapital;
     if (vendedor !== "Todos") list = list.filter(c => c.Vendedor === vendedor);
     if (status !== "Todos") list = list.filter(c => c.Status === status);
     if (busca) {
@@ -41,7 +44,22 @@ const Dashboard: React.FC = () => {
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientes, vendedor, status, busca]);
+  }, [clientesCapital, vendedor, status, busca]);
+
+  const [intVendedor, setIntVendedor] = useState("Todos");
+  const [intStatus, setIntStatus] = useState("Todos");
+  const [intBusca, setIntBusca] = useState("");
+
+  const filteredInterior = useMemo(() => {
+    let list = clientesInterior;
+    if (intVendedor !== "Todos") list = list.filter(c => c.Vendedor === intVendedor);
+    if (intStatus !== "Todos") list = list.filter(c => c.Status === intStatus);
+    if (intBusca) {
+      const term = intBusca.toLowerCase();
+      list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
+    }
+    return list;
+  }, [clientesInterior, intVendedor, intStatus, intBusca]);
 
   const filteredMesesCols = useMemo(() => {
     if (!periodFrom && !periodTo) return mesesCols;
@@ -112,6 +130,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
+              <TabsTrigger value="interior">Interior</TabsTrigger>
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
               <Download size={14} className="mr-1" /> Exportar CSV
@@ -145,6 +164,29 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="registro">
             <RegistroVisitas />
+          </TabsContent>
+          <TabsContent value="interior">
+            <div className="space-y-4">
+              {/* KPIs Interior */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { label: "Total", value: String(filteredInterior.length), cls: "" },
+                  { label: "Fat. Total", value: fmtBRL(filteredInterior.reduce((s, c) => s + c.Fat_Total, 0)), cls: "" },
+                  { label: "Ativos", value: String(filteredInterior.filter(c => c.Status === "Ativo").length), cls: "badge-active" },
+                  { label: "Risco", value: String(filteredInterior.filter(c => c.Status === "Risco").length), cls: "badge-risk" },
+                  { label: "Inativos", value: String(filteredInterior.filter(c => c.Status === "Inativo").length), cls: "badge-inactive" },
+                ].map(c => (
+                  <div key={c.label} className="bg-card rounded-lg shadow-sm border p-3 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">{c.label}</div>
+                    <div className={`text-lg font-semibold ${c.cls}`}>{c.value}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Filtros Interior */}
+              <Filters vendedor={intVendedor} setVendedor={setIntVendedor} status={intStatus} setStatus={setIntStatus} busca={intBusca} setBusca={setIntBusca} />
+              {/* Tabela Interior */}
+              <ClienteTable clientes={filteredInterior} onSelect={setSelectedCliente} />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
