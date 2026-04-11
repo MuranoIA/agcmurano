@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { VENDEDORES, Visita } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { downloadFile, exportCSV } from "@/lib/format";
 
 const RegistroVisitas: React.FC = () => {
   const { clientes, visitas, addVisita, removeVisita } = useAppData();
+  const { isAdmin, vendorName } = useAuth();
 
   const [search, setSearch] = useState("");
   const [selectedCodigo, setSelectedCodigo] = useState("");
@@ -20,43 +22,59 @@ const RegistroVisitas: React.FC = () => {
   const [hora, setHora] = useState(() => new Date().toTimeString().slice(0, 5));
   const [teveVenda, setTeveVenda] = useState(false);
   const [obs, setObs] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [filtroVendedor, setFiltroVendedor] = useState("Todos");
   const [filtroDataIni, setFiltroDataIni] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
 
+  // Governed clients for vendor
+  const governedClientes = useMemo(() => {
+    if (isAdmin) return clientes;
+    if (vendorName) return clientes.filter(c => c.Vendedor === vendorName);
+    return [];
+  }, [clientes, isAdmin, vendorName]);
+
   const suggestions = useMemo(() => {
     if (!search || search.length < 2) return [];
     const term = search.toLowerCase();
-    return clientes.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term)).slice(0, 8);
-  }, [search, clientes]);
+    return governedClientes.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term)).slice(0, 8);
+  }, [search, governedClientes]);
 
   const selectCliente = (codigo: string) => {
     setSelectedCodigo(codigo);
-    const c = clientes.find(cl => cl.Codigo === codigo);
+    const c = governedClientes.find(cl => cl.Codigo === codigo);
     if (c) {
       setSearch(c.Nome);
       if (c.Vendedor) setVendedor(c.Vendedor);
+      else if (vendorName) setVendedor(vendorName);
     }
   };
 
   const registrar = async () => {
     if (!selectedCodigo) { toast.error("Selecione um cliente"); return; }
     if (!vendedor) { toast.error("Selecione um vendedor"); return; }
-    const c = clientes.find(cl => cl.Codigo === selectedCodigo);
-    const [y, m, d] = data.split("-");
-    const visita: Visita = {
-      codigo: selectedCodigo,
-      nome: c?.Nome || "",
-      vendedor,
-      data: `${d}/${m}/${y}`,
-      hora,
-      teve_venda: teveVenda,
-      observacao: obs,
-    };
-    await addVisita(visita);
-    setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
-    toast.success("Visita registrada!");
+    setSaving(true);
+    try {
+      const c = governedClientes.find(cl => cl.Codigo === selectedCodigo);
+      const [y, m, d] = data.split("-");
+      const visita: Visita = {
+        codigo: selectedCodigo,
+        nome: c?.Nome || "",
+        vendedor,
+        data: `${d}/${m}/${y}`,
+        hora,
+        teve_venda: teveVenda,
+        observacao: obs,
+      };
+      await addVisita(visita);
+      setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
+      toast.success("Visita registrada!");
+    } catch (err: any) {
+      toast.error("Erro ao registrar visita: " + (err.message || err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemove = async (id: string) => {
@@ -65,8 +83,15 @@ const RegistroVisitas: React.FC = () => {
     }
   };
 
+  // Filter visitas by governance
+  const governedVisitas = useMemo(() => {
+    if (isAdmin) return visitas;
+    if (vendorName) return visitas.filter(v => v.vendedor === vendorName);
+    return [];
+  }, [visitas, isAdmin, vendorName]);
+
   const filteredVisitas = useMemo(() => {
-    let list = [...visitas];
+    let list = [...governedVisitas];
     if (filtroVendedor !== "Todos") list = list.filter(v => v.vendedor === filtroVendedor);
     if (filtroDataIni) {
       const [y, m, d] = filtroDataIni.split("-");
@@ -79,7 +104,7 @@ const RegistroVisitas: React.FC = () => {
       list = list.filter(v => v.data <= fim);
     }
     return list;
-  }, [visitas, filtroVendedor, filtroDataIni, filtroDataFim]);
+  }, [governedVisitas, filtroVendedor, filtroDataIni, filtroDataFim]);
 
   const exportarHistorico = () => {
     const headers = ["Data", "Hora", "Cliente", "Vendedor", "Houve Venda", "Observacao"];
@@ -131,8 +156,8 @@ const RegistroVisitas: React.FC = () => {
             <Textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" rows={2} />
           </div>
         </div>
-        <Button className="mt-4" onClick={registrar}>
-          <CheckCircle size={16} className="mr-1" /> Registrar visita
+        <Button className="mt-4" onClick={registrar} disabled={saving}>
+          <CheckCircle size={16} className="mr-1" /> {saving ? "Salvando..." : "Registrar visita"}
         </Button>
       </div>
 
@@ -174,7 +199,7 @@ const RegistroVisitas: React.FC = () => {
                   <td className="px-3 py-2 text-center">{v.teve_venda ? "✅" : "—"}</td>
                   <td className="px-3 py-2 text-xs max-w-[200px] truncate">{v.observacao}</td>
                   <td className="px-3 py-2 text-center">
-                    {v.id && (
+                    {v.id && isAdmin && (
                       <Button variant="ghost" size="sm" onClick={() => handleRemove(v.id!)}>
                         <Trash2 size={14} className="text-destructive" />
                       </Button>

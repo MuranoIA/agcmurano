@@ -9,6 +9,7 @@ interface AuthState {
   role: AppRole | null;
   loading: boolean;
   isAdmin: boolean;
+  vendorName: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -19,6 +20,7 @@ export const useAuth = () => useContext(AuthCtx);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [vendorName, setVendorName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
@@ -30,27 +32,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRole((data?.role as AppRole) || null);
   };
 
+  const fetchVendorName = async (email: string) => {
+    const { data } = await supabase
+      .from("vendor_email_mapping")
+      .select("vendor_name")
+      .eq("email", email)
+      .maybeSingle();
+    setVendorName(data?.vendor_name || null);
+  };
+
   useEffect(() => {
-    // Set up listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const u = session?.user ?? null;
         setUser(u);
         if (u) {
           await fetchRole(u.id);
+          if (u.email) await fetchVendorName(u.email);
         } else {
           setRole(null);
+          setVendorName(null);
         }
         setLoading(false);
       }
     );
 
-    // Then check current session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
         await fetchRole(u.id);
+        if (u.email) await fetchVendorName(u.email);
       }
       setLoading(false);
     });
@@ -67,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
+    setVendorName(null);
   };
 
   return (
@@ -75,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role,
       loading,
       isAdmin: role === "admin",
+      vendorName,
       signIn,
       signOut,
     }}>
