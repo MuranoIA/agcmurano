@@ -19,10 +19,7 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
   const [vendedor, setVendedor] = useState("");
-  const [valorAbr, setValorAbr] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const lastMonth = mesesCols[mesesCols.length - 1] || "Abr/26";
 
   const handleSave = async () => {
     if (!codigo.trim() || !nome.trim()) {
@@ -31,16 +28,12 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
     }
     setSaving(true);
     try {
-      const meses: Record<string, number> = {};
-      const val = parseFloat(valorAbr.replace(",", ".")) || 0;
-      if (val > 0) meses[lastMonth] = val;
-
       const { error } = await supabase.from("clientes").insert({
         codigo: codigo.trim(),
         nome: nome.trim(),
         vendedor: vendedor || null,
         status: "Inativo",
-        fat_total: val,
+        fat_total: 0,
         tm_mes: 0,
         tm_pedido: 0,
         ciclo_medio_d: 0,
@@ -50,7 +43,7 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
         dias_para_acao: 0,
         n_pedidos: 0,
         objetivo_rs: 0,
-        meses: meses as any,
+        meses: {} as any,
       });
 
       if (error) throw error;
@@ -60,7 +53,6 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
       setCodigo("");
       setNome("");
       setVendedor("");
-      setValorAbr("");
       onOpenChange(false);
     } catch (err: any) {
       toast.error("Erro ao salvar: " + (err.message || err));
@@ -94,10 +86,6 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label htmlFor="valor">Valor {lastMonth}</Label>
-            <Input id="valor" value={valorAbr} onChange={e => setValorAbr(e.target.value)} placeholder="0,00" />
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full">
             {saving ? "Salvando..." : "Salvar"}

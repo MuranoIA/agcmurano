@@ -61,8 +61,12 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if ((!csvLoaded || showUpload) && role === "admin") {
-    return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
+  if (!csvLoaded && role === "admin") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Nenhum dado carregado no banco de dados.</p>
+      </div>
+    );
   }
 
   if (!csvLoaded && role !== "admin") {

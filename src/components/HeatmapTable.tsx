@@ -3,7 +3,6 @@ import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { heatmapColor } from "@/lib/heatmapColors";
 import { fmtBRLShort } from "@/lib/format";
-import { Pencil, Check } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
@@ -11,18 +10,9 @@ interface Props {
 }
 
 const HeatmapTable: React.FC<Props> = ({ clientes }) => {
-  const { mesesCols, overlay, setValorMes } = useAppData();
-  const lastMonth = mesesCols[mesesCols.length - 1] || "";
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const { mesesCols } = useAppData();
   const [filterMes, setFilterMes] = useState("Todos");
   const [filterCondicao, setFilterCondicao] = useState("Todos");
-
-  const commitEdit = (codigo: string) => {
-    const val = parseFloat(editValue.replace(",", ".")) || 0;
-    setValorMes(codigo, lastMonth, val);
-    setEditingCell(null);
-  };
 
   const filtered = useMemo(() => {
     if (filterMes === "Todos" || filterCondicao === "Todos") return clientes;
@@ -90,41 +80,13 @@ const HeatmapTable: React.FC<Props> = ({ clientes }) => {
                 {mesesCols.map(m => {
                   const val = c.meses[m] || 0;
                   const { bg, fg } = heatmapColor(val, c.TM_Mes);
-                  const isLast = m === lastMonth;
-                  const isEdited = !!overlay.valores_mes[c.Codigo]?.[m];
-                  const cellKey = `${c.Codigo}-${m}`;
                   return (
                     <td
                       key={m}
-                      className="px-1 py-1.5 text-center cursor-pointer"
+                      className="px-1 py-1.5 text-center"
                       style={{ backgroundColor: bg, color: fg }}
-                      onClick={() => {
-                        if (isLast) {
-                          setEditingCell(cellKey);
-                          setEditValue(String(val || ""));
-                        }
-                      }}
                     >
-                      {editingCell === cellKey ? (
-                        <span className="flex items-center justify-center gap-0.5">
-                          <input
-                            autoFocus
-                            className="w-14 text-center text-xs border rounded bg-card text-foreground"
-                            value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onBlur={() => commitEdit(c.Codigo)}
-                            onKeyDown={e => e.key === "Enter" && commitEdit(c.Codigo)}
-                          />
-                          <button onClick={e => { e.stopPropagation(); commitEdit(c.Codigo); }} className="text-green-600 hover:text-green-800" title="Confirmar">
-                            <Check size={12} />
-                          </button>
-                        </span>
-                      ) : val > 0 ? (
-                        <span className="flex items-center justify-center gap-0.5">
-                          {fmtBRLShort(val)}
-                          {isEdited && <Pencil size={8} />}
-                        </span>
-                      ) : null}
+                      {val > 0 ? fmtBRLShort(val) : null}
                     </td>
                   );
                 })}
