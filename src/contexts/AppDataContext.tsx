@@ -45,6 +45,7 @@ function applyOverlay(raw: Cliente[], overlay: OverlayStore): Cliente[] {
 }
 
 export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role, vendorName } = useAuth();
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
@@ -123,7 +124,13 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setVisitas(prev => prev.filter(v => v.id !== id));
   }, []);
 
-  const clientes = useMemo(() => applyOverlay(rawClientes, overlay), [rawClientes, overlay]);
+  const clientes = useMemo(() => {
+    let list = applyOverlay(rawClientes, overlay);
+    if (role === "vendedor" && vendorName) {
+      list = list.filter(c => c.Vendedor === vendorName);
+    }
+    return list;
+  }, [rawClientes, overlay, role, vendorName]);
 
   return (
     <Ctx.Provider value={{
