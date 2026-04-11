@@ -14,7 +14,7 @@ interface Props {
 type SortKey = keyof Cliente | "lastMonth";
 
 const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
-  const { mesesCols, overlay, setVendedor, setValorMes } = useAppData();
+  const { mesesCols, overlay, setVendedor, setValorMes, apiCodigos } = useAppData();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
   const [sortAsc, setSortAsc] = useState(false);
@@ -70,6 +70,7 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
   };
 
   const isEdited = (codigo: string) => !!overlay.valores_mes[codigo]?.[lastMonth];
+  const isFromApi = (codigo: string) => apiCodigos.has(codigo);
 
   return (
     <div className="overflow-x-auto rounded-lg border bg-card">
@@ -121,7 +122,7 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
                 ) : (
                   <span className="flex items-center justify-end gap-1">
                     {fmtBRLShort(c.meses[lastMonth] || 0)}
-                    {isEdited(c.Codigo) && <Pencil size={10} className="text-accent" />}
+                    {isFromApi(c.Codigo) ? <span title="Dados da API">🔄</span> : isEdited(c.Codigo) ? <Pencil size={10} className="text-accent" /> : null}
                   </span>
                 )}
               </td>
