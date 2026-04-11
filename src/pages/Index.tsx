@@ -9,6 +9,7 @@ import ClienteTable from "@/components/ClienteTable";
 import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
+import RankingTable from "@/components/RankingTable";
 import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
