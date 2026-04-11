@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientes, vendedor, status, busca]);
 
-  const handleNewUpload = useCallback(() => setShowUpload(true), []);
+  const handleNewUpload = useCallback(() => {}, []);
 
   const exportAll = () => {
     const headers = ["Codigo", "Nome", "Vendedor", "Status", "TM_Mes", "Objetivo_R$", "Ciclo_Medio_d", "MCC", "Dias_Sem_Compra", "Proxima_Acao", "Fat_Total", ...mesesCols];
