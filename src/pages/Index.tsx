@@ -10,11 +10,12 @@ import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
 import ClientePanel from "@/components/ClientePanel";
+import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Plus } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
@@ -24,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showNovoCliente, setShowNovoCliente] = useState(false);
 
   const filtered = useMemo(() => {
     let list = clientes;
@@ -90,6 +92,13 @@ const Dashboard: React.FC = () => {
           </div>
 
           <TabsContent value="clientes">
+            {role === "admin" && (
+              <div className="mb-3">
+                <Button size="sm" onClick={() => setShowNovoCliente(true)}>
+                  <Plus size={14} className="mr-1" /> Novo cliente
+                </Button>
+              </div>
+            )}
             <ClienteTable clientes={filtered} onSelect={setSelectedCliente} />
           </TabsContent>
           <TabsContent value="heatmap">
@@ -110,6 +119,8 @@ const Dashboard: React.FC = () => {
           onClose={() => setSelectedCliente(null)}
         />
       )}
+
+      <NovoClienteModal open={showNovoCliente} onOpenChange={setShowNovoCliente} />
     </div>
   );
 };
