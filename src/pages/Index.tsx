@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
-import UploadScreen from "@/components/UploadScreen";
+
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
 import Filters from "@/components/Filters";
@@ -20,13 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
 
 const Dashboard: React.FC = () => {
-  const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
+  const { clientes, mesesCols, csvLoaded, loading } = useAppData();
   const { role } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
+  
   const [showNovoCliente, setShowNovoCliente] = useState(false);
 
   const filtered = useMemo(() => {
