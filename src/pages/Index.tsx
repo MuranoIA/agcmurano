@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
-import UploadScreen from "@/components/UploadScreen";
+
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
 import Filters from "@/components/Filters";
@@ -20,13 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
 
 const Dashboard: React.FC = () => {
-  const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
+  const { clientes, mesesCols, csvLoaded, loading } = useAppData();
   const { role } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
+  
   const [showNovoCliente, setShowNovoCliente] = useState(false);
 
   const filtered = useMemo(() => {
@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientes, vendedor, status, busca]);
 
-  const handleNewUpload = useCallback(() => setShowUpload(true), []);
+  const handleNewUpload = useCallback(() => {}, []);
 
   const exportAll = () => {
     const headers = ["Codigo", "Nome", "Vendedor", "Status", "TM_Mes", "Objetivo_R$", "Ciclo_Medio_d", "MCC", "Dias_Sem_Compra", "Proxima_Acao", "Fat_Total", ...mesesCols];
@@ -61,8 +61,12 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if ((!csvLoaded || showUpload) && role === "admin") {
-    return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
+  if (!csvLoaded && role === "admin") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Nenhum dado carregado no banco de dados.</p>
+      </div>
+    );
   }
 
   if (!csvLoaded && role !== "admin") {
