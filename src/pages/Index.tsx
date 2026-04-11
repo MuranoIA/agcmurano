@@ -10,11 +10,12 @@ import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
 import ClientePanel from "@/components/ClientePanel";
+import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Plus } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
