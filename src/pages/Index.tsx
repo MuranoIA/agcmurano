@@ -9,6 +9,7 @@ import ClienteTable from "@/components/ClienteTable";
 import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
+import RankingTable from "@/components/RankingTable";
 import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
@@ -84,6 +85,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="clientes">Lista de Clientes</TabsTrigger>
               <TabsTrigger value="heatmap">Heatmap Mensal</TabsTrigger>
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
+              <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
@@ -106,6 +108,9 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="agenda">
             <AgendaVisitas clientes={filtered} />
+          </TabsContent>
+          <TabsContent value="ranking">
+            <RankingTable clientes={filtered} />
           </TabsContent>
           <TabsContent value="registro">
             <RegistroVisitas />
