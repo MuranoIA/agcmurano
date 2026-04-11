@@ -13,6 +13,7 @@ import {
   subscribeToOverlayChanges,
 } from "@/lib/supabaseService";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppState {
   clientes: Cliente[];
