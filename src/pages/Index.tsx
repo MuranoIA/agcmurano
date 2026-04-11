@@ -25,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showNovoCliente, setShowNovoCliente] = useState(false);
 
   const filtered = useMemo(() => {
     let list = clientes;
@@ -91,6 +92,13 @@ const Dashboard: React.FC = () => {
           </div>
 
           <TabsContent value="clientes">
+            {role === "admin" && (
+              <div className="mb-3">
+                <Button size="sm" onClick={() => setShowNovoCliente(true)}>
+                  <Plus size={14} className="mr-1" /> Novo cliente
+                </Button>
+              </div>
+            )}
             <ClienteTable clientes={filtered} onSelect={setSelectedCliente} />
           </TabsContent>
           <TabsContent value="heatmap">
@@ -111,6 +119,8 @@ const Dashboard: React.FC = () => {
           onClose={() => setSelectedCliente(null)}
         />
       )}
+
+      <NovoClienteModal open={showNovoCliente} onOpenChange={setShowNovoCliente} />
     </div>
   );
 };
