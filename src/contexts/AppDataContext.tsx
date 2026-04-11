@@ -104,19 +104,29 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const handleSetValorMes = useCallback(async (codigo: string, mes: string, valor: number) => {
-    await dbSetValorMes(codigo, mes, valor);
-    setOverlay(prev => ({
-      ...prev,
-      valores_mes: {
-        ...prev.valores_mes,
-        [codigo]: { ...(prev.valores_mes[codigo] || {}), [mes]: valor },
-      },
-    }));
+    try {
+      await dbSetValorMes(codigo, mes, valor);
+      setOverlay(prev => ({
+        ...prev,
+        valores_mes: {
+          ...prev.valores_mes,
+          [codigo]: { ...(prev.valores_mes[codigo] || {}), [mes]: valor },
+        },
+      }));
+    } catch (err: any) {
+      toast.error("Erro ao salvar valor: " + (err.message || err));
+      throw err;
+    }
   }, []);
 
   const handleAddVisita = useCallback(async (v: Visita) => {
-    await dbAddVisita(v);
-    await refreshData();
+    try {
+      await dbAddVisita(v);
+      await refreshData();
+    } catch (err: any) {
+      toast.error("Erro ao registrar visita: " + (err.message || err));
+      throw err;
+    }
   }, [refreshData]);
 
   const handleRemoveVisita = useCallback(async (id: string) => {

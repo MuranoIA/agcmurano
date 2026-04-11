@@ -4,7 +4,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import { VENDEDORES } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
-import { ArrowUpDown, Pencil } from "lucide-react";
+import { ArrowUpDown, Pencil, Check } from "lucide-react";
 
 interface Props {
   clientes: Cliente[];
@@ -104,14 +104,20 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
               <td className="px-3 py-2 text-right">{c.Objetivo_R$ ? fmtBRL(c.Objetivo_R$) : "—"}</td>
               <td className="px-3 py-2 text-right" onClick={e => { e.stopPropagation(); startEdit(c.Codigo, c.meses[lastMonth] || 0); }}>
                 {editingCell === c.Codigo ? (
-                  <input
-                    autoFocus
-                    className="border rounded px-1 py-0.5 w-24 text-right text-xs"
-                    value={editValue}
-                    onChange={e => setEditValue(e.target.value)}
-                    onBlur={() => commitEdit(c.Codigo)}
-                    onKeyDown={e => e.key === "Enter" && commitEdit(c.Codigo)}
-                  />
+                  <span className="flex items-center justify-end gap-1">
+                    <input
+                      autoFocus
+                      className="border rounded px-1 py-0.5 w-20 text-right text-xs"
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onBlur={() => commitEdit(c.Codigo)}
+                      onKeyDown={e => e.key === "Enter" && commitEdit(c.Codigo)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <button onClick={e => { e.stopPropagation(); commitEdit(c.Codigo); }} className="text-green-600 hover:text-green-800" title="Confirmar">
+                      <Check size={14} />
+                    </button>
+                  </span>
                 ) : (
                   <span className="flex items-center justify-end gap-1">
                     {fmtBRLShort(c.meses[lastMonth] || 0)}
