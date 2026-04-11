@@ -1,9 +1,10 @@
-import React, { useRef } from "react";
-import { Upload, Download, FolderOpen } from "lucide-react";
+import React from "react";
+import { Upload, Download, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadJSON } from "@/lib/format";
 import { toast } from "sonner";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   onNewUpload: () => void;
@@ -11,6 +12,7 @@ interface Props {
 
 const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
   const { csvLoaded, overlay } = useAppData();
+  const { signOut, user, role } = useAuth();
 
   const handleExportOverlay = () => {
     const now = new Date();
@@ -26,14 +28,20 @@ const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
       <div className="container flex items-center justify-between h-14 px-4">
         <h1 className="text-lg font-bold tracking-tight">Grandes Contas</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={onNewUpload}>
-            <Upload size={16} className="mr-1" /> Novo CSV
-          </Button>
-          {csvLoaded && (
+          {role === "admin" && (
+            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={onNewUpload}>
+              <Upload size={16} className="mr-1" /> Novo CSV
+            </Button>
+          )}
+          {csvLoaded && role === "admin" && (
             <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleExportOverlay}>
               <Download size={16} className="mr-1" /> Exportar overlay
             </Button>
           )}
+          <span className="text-xs text-primary-foreground/70 hidden sm:inline">{user?.email}</span>
+          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={signOut}>
+            <LogOut size={16} className="mr-1" /> Sair
+          </Button>
         </div>
       </div>
     </header>
