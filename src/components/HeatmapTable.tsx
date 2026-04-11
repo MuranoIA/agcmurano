@@ -3,7 +3,7 @@ import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { heatmapColor } from "@/lib/heatmapColors";
 import { fmtBRLShort } from "@/lib/format";
-import { Pencil } from "lucide-react";
+import { Pencil, Check } from "lucide-react";
 
 interface Props {
   clientes: Cliente[];
@@ -59,14 +59,19 @@ const HeatmapTable: React.FC<Props> = ({ clientes }) => {
                     }}
                   >
                     {editingCell === cellKey ? (
-                      <input
-                        autoFocus
-                        className="w-16 text-center text-xs border rounded bg-card text-foreground"
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onBlur={() => commitEdit(c.Codigo)}
-                        onKeyDown={e => e.key === "Enter" && commitEdit(c.Codigo)}
-                      />
+                      <span className="flex items-center justify-center gap-0.5">
+                        <input
+                          autoFocus
+                          className="w-14 text-center text-xs border rounded bg-card text-foreground"
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onBlur={() => commitEdit(c.Codigo)}
+                          onKeyDown={e => e.key === "Enter" && commitEdit(c.Codigo)}
+                        />
+                        <button onClick={e => { e.stopPropagation(); commitEdit(c.Codigo); }} className="text-green-600 hover:text-green-800" title="Confirmar">
+                          <Check size={12} />
+                        </button>
+                      </span>
                     ) : val > 0 ? (
                       <span className="flex items-center justify-center gap-0.5">
                         {fmtBRLShort(val)}

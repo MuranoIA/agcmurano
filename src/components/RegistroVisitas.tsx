@@ -54,9 +54,13 @@ const RegistroVisitas: React.FC = () => {
       teve_venda: teveVenda,
       observacao: obs,
     };
-    await addVisita(visita);
-    setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
-    toast.success("Visita registrada!");
+    try {
+      await addVisita(visita);
+      setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
+      toast.success("Visita registrada!");
+    } catch {
+      // error already toasted in context
+    }
   };
 
   const handleRemove = async (id: string) => {
