@@ -32,26 +32,26 @@ const exportSection = (title: string, items: Cliente[]) => {
 
 const AgendaVisitas: React.FC<Props> = ({ clientes }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {sections.map(sec => {
         const items = clientes.filter(sec.filter);
         if (items.length === 0) return null;
         return (
-          <div key={sec.title} className={`border-l-4 ${sec.color} bg-card rounded-lg shadow-sm p-4`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">{sec.emoji} {sec.title} ({items.length})</h3>
+          <div key={sec.title} className={`border-l-4 ${sec.color} bg-card rounded-lg shadow-sm p-3`}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-sm">{sec.emoji} {sec.title} ({items.length})</h3>
               <Button variant="outline" size="sm" onClick={() => exportSection(sec.title, items)}>
                 <Download size={14} className="mr-1" /> Exportar
               </Button>
             </div>
-            <div className="space-y-2">
+            <div className="divide-y">
               {items.map(c => (
-                <div key={c.Codigo} className="flex items-center gap-4 text-sm py-1.5 border-b last:border-0">
+                <div key={c.Codigo} className="flex items-center gap-4 text-sm py-1 px-1">
                   <span className="font-medium w-48 truncate">{c.Nome}</span>
                   <span className="text-muted-foreground w-20">{c.Vendedor || "—"}</span>
-                  <span className="w-16">Ciclo: {c.Ciclo_Medio_d}d</span>
-                  <span className="w-20">Dias s/C: {c.Dias_Sem_Compra}</span>
-                  <span className="w-28">{fmtBRL(c.TM_Mes)}</span>
+                  <span className="w-16 text-xs">Ciclo: {c.Ciclo_Medio_d}d</span>
+                  <span className="w-20 text-xs">Dias s/C: {c.Dias_Sem_Compra}</span>
+                  <span className="w-28 text-xs">{fmtBRL(c.TM_Mes)}</span>
                   <StatusBadge status={c.Status} />
                   <span className="text-xs flex-1">{c.Proxima_Acao}</span>
                 </div>
