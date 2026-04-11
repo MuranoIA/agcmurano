@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import UploadScreen from "@/components/UploadScreen";
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
@@ -17,6 +18,7 @@ import { Download, Loader2 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
+  const { role } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
@@ -55,8 +57,16 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (!csvLoaded || showUpload) {
+  if ((!csvLoaded || showUpload) && role === "admin") {
     return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
+  }
+
+  if (!csvLoaded && role !== "admin") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Nenhum dado carregado. Aguarde o administrador importar o CSV.</p>
+      </div>
+    );
   }
 
   return (

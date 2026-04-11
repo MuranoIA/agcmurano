@@ -13,6 +13,7 @@ import {
   subscribeToOverlayChanges,
 } from "@/lib/supabaseService";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppState {
   clientes: Cliente[];
@@ -44,6 +45,7 @@ function applyOverlay(raw: Cliente[], overlay: OverlayStore): Cliente[] {
 }
 
 export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role, vendorName } = useAuth();
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
@@ -122,7 +124,13 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setVisitas(prev => prev.filter(v => v.id !== id));
   }, []);
 
-  const clientes = useMemo(() => applyOverlay(rawClientes, overlay), [rawClientes, overlay]);
+  const clientes = useMemo(() => {
+    let list = applyOverlay(rawClientes, overlay);
+    if (role === "vendedor" && vendorName) {
+      list = list.filter(c => c.Vendedor === vendorName);
+    }
+    return list;
+  }, [rawClientes, overlay, role, vendorName]);
 
   return (
     <Ctx.Provider value={{
@@ -130,7 +138,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       mesesCols,
       csvLoaded,
       overlay,
-      visitas,
+      visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
       loadCSV,
       refreshData,
