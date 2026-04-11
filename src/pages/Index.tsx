@@ -165,6 +165,29 @@ const Dashboard: React.FC = () => {
           <TabsContent value="registro">
             <RegistroVisitas />
           </TabsContent>
+          <TabsContent value="interior">
+            <div className="space-y-4">
+              {/* KPIs Interior */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { label: "Total", value: String(filteredInterior.length), cls: "" },
+                  { label: "Fat. Total", value: fmtBRL(filteredInterior.reduce((s, c) => s + c.Fat_Total, 0)), cls: "" },
+                  { label: "Ativos", value: String(filteredInterior.filter(c => c.Status === "Ativo").length), cls: "badge-active" },
+                  { label: "Risco", value: String(filteredInterior.filter(c => c.Status === "Risco").length), cls: "badge-risk" },
+                  { label: "Inativos", value: String(filteredInterior.filter(c => c.Status === "Inativo").length), cls: "badge-inactive" },
+                ].map(c => (
+                  <div key={c.label} className="bg-card rounded-lg shadow-sm border p-3 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">{c.label}</div>
+                    <div className={`text-lg font-semibold ${c.cls}`}>{c.value}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Filtros Interior */}
+              <Filters vendedor={intVendedor} setVendedor={setIntVendedor} status={intStatus} setStatus={setIntStatus} busca={intBusca} setBusca={setIntBusca} />
+              {/* Tabela Interior */}
+              <ClienteTable clientes={filteredInterior} onSelect={setSelectedCliente} />
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
 
