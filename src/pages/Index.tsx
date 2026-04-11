@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
-import { useAuth } from "@/contexts/AuthContext";
 import UploadScreen from "@/components/UploadScreen";
 import AppHeader from "@/components/AppHeader";
 import KPIBar from "@/components/KPIBar";
@@ -9,35 +8,23 @@ import ClienteTable from "@/components/ClienteTable";
 import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
-import RankingTab from "@/components/RankingTab";
-import AdminDashboard from "@/components/AdminDashboard";
-import NovoClienteModal from "@/components/NovoClienteModal";
 import ClientePanel from "@/components/ClientePanel";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Plus } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { clientes, mesesCols, csvLoaded, loading, loadCSV } = useAppData();
-  const { isAdmin, vendorName } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [showNovoCliente, setShowNovoCliente] = useState(false);
-
-  // Filter by vendor governance: vendedores only see their own clients
-  const governedClientes = useMemo(() => {
-    if (isAdmin) return clientes;
-    if (vendorName) return clientes.filter(c => c.Vendedor === vendorName);
-    return [];
-  }, [clientes, isAdmin, vendorName]);
 
   const filtered = useMemo(() => {
-    let list = governedClientes;
+    let list = clientes;
     if (vendedor === "Sem vendedor") list = list.filter(c => !c.Vendedor);
     else if (vendedor !== "Todos") list = list.filter(c => c.Vendedor === vendedor);
     if (status !== "Todos") list = list.filter(c => c.Status === status);
@@ -46,7 +33,7 @@ const Dashboard: React.FC = () => {
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [governedClientes, vendedor, status, busca]);
+  }, [clientes, vendedor, status, busca]);
 
   const handleNewUpload = useCallback(() => setShowUpload(true), []);
 
@@ -68,26 +55,15 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if ((!csvLoaded || showUpload) && isAdmin) {
+  if (!csvLoaded || showUpload) {
     return <UploadScreen onFileLoad={async (text) => { await loadCSV(text); setShowUpload(false); }} />;
-  }
-
-  if (!csvLoaded && !isAdmin) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AppHeader onNewUpload={handleNewUpload} />
-        <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
-          Aguardando o administrador carregar os dados...
-        </div>
-      </div>
-    );
   }
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} />
       <div className="container px-4 py-4">
-        <KPIBar clientes={filtered} />
+        <KPIBar />
         <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
 
         <Tabs defaultValue="clientes" className="mt-2">
@@ -97,19 +73,10 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="heatmap">Heatmap Mensal</TabsTrigger>
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
-              <TabsTrigger value="ranking">Ranking</TabsTrigger>
-              {isAdmin && <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>}
             </TabsList>
-            <div className="flex gap-2">
-              {isAdmin && (
-                <Button variant="outline" size="sm" onClick={() => setShowNovoCliente(true)}>
-                  <Plus size={14} className="mr-1" /> Novo cliente
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={exportAll}>
-                <Download size={14} className="mr-1" /> Exportar CSV
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={exportAll}>
+              <Download size={14} className="mr-1" /> Exportar CSV
+            </Button>
           </div>
 
           <TabsContent value="clientes">
@@ -124,14 +91,6 @@ const Dashboard: React.FC = () => {
           <TabsContent value="registro">
             <RegistroVisitas />
           </TabsContent>
-          <TabsContent value="ranking">
-            <RankingTab clientes={governedClientes} />
-          </TabsContent>
-          {isAdmin && (
-            <TabsContent value="visao-geral">
-              <AdminDashboard />
-            </TabsContent>
-          )}
         </Tabs>
       </div>
 
@@ -141,8 +100,6 @@ const Dashboard: React.FC = () => {
           onClose={() => setSelectedCliente(null)}
         />
       )}
-
-      <NovoClienteModal open={showNovoCliente} onClose={() => setShowNovoCliente(false)} />
     </div>
   );
 };
