@@ -1,9 +1,12 @@
 import React from "react";
-import { useAppData } from "@/contexts/AppDataContext";
+import { Cliente } from "@/lib/types";
 import { fmtBRL } from "@/lib/format";
 
-const KPIBar: React.FC = () => {
-  const { clientes } = useAppData();
+interface Props {
+  clientes: Cliente[];
+}
+
+const KPIBar: React.FC<Props> = ({ clientes }) => {
   const total = clientes.length;
   const fatTotal = clientes.reduce((s, c) => s + c.Fat_Total, 0);
   const tmMesAvg = total ? clientes.reduce((s, c) => s + c.TM_Mes, 0) / total : 0;

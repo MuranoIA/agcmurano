@@ -32,28 +32,28 @@ const exportSection = (title: string, items: Cliente[]) => {
 
 const AgendaVisitas: React.FC<Props> = ({ clientes }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {sections.map(sec => {
         const items = clientes.filter(sec.filter);
         if (items.length === 0) return null;
         return (
-          <div key={sec.title} className={`border-l-4 ${sec.color} bg-card rounded-lg shadow-sm p-4`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">{sec.emoji} {sec.title} ({items.length})</h3>
-              <Button variant="outline" size="sm" onClick={() => exportSection(sec.title, items)}>
-                <Download size={14} className="mr-1" /> Exportar
+          <div key={sec.title} className={`border-l-4 ${sec.color} bg-card rounded-lg shadow-sm px-3 py-2`}>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-semibold text-sm">{sec.emoji} {sec.title} ({items.length})</h3>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => exportSection(sec.title, items)}>
+                <Download size={12} className="mr-1" /> Exportar
               </Button>
             </div>
-            <div className="space-y-2">
+            <div>
               {items.map(c => (
-                <div key={c.Codigo} className="flex items-center gap-4 text-sm py-1.5 border-b last:border-0">
-                  <span className="font-medium w-48 truncate">{c.Nome}</span>
-                  <span className="text-muted-foreground w-20">{c.Vendedor || "—"}</span>
-                  <span className="w-16">Ciclo: {c.Ciclo_Medio_d}d</span>
-                  <span className="w-20">Dias s/C: {c.Dias_Sem_Compra}</span>
-                  <span className="w-28">{fmtBRL(c.TM_Mes)}</span>
+                <div key={c.Codigo} className="flex items-center gap-3 text-xs py-1 border-b last:border-0">
+                  <span className="font-medium w-44 truncate">{c.Nome}</span>
+                  <span className="text-muted-foreground w-16">{c.Vendedor || "—"}</span>
+                  <span className="w-14">Ciclo: {c.Ciclo_Medio_d}d</span>
+                  <span className="w-16">Dias s/C: {c.Dias_Sem_Compra}</span>
+                  <span className="w-24">{fmtBRL(c.TM_Mes)}</span>
                   <StatusBadge status={c.Status} />
-                  <span className="text-xs flex-1">{c.Proxima_Acao}</span>
+                  <span className="text-xs flex-1 truncate">{c.Proxima_Acao}</span>
                 </div>
               ))}
             </div>

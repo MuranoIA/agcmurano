@@ -188,11 +188,33 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_email_mapping: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          vendor_name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          vendor_name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          vendor_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_vendor_name_for_user: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
