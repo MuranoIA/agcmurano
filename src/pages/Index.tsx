@@ -73,7 +73,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} />
       <div className="container px-4 py-4">
-        <KPIBar />
+        <KPIBar clientes={filtered} />
         <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
 
         <Tabs defaultValue="clientes" className="mt-2">
