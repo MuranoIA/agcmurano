@@ -20,6 +20,7 @@ const RegistroVisitas: React.FC = () => {
   const [hora, setHora] = useState(() => new Date().toTimeString().slice(0, 5));
   const [teveVenda, setTeveVenda] = useState(false);
   const [obs, setObs] = useState("");
+  const [registrando, setRegistrando] = useState(false);
 
   const [filtroVendedor, setFiltroVendedor] = useState("Todos");
   const [filtroDataIni, setFiltroDataIni] = useState("");
@@ -43,25 +44,37 @@ const RegistroVisitas: React.FC = () => {
   const registrar = async () => {
     if (!selectedCodigo) { toast.error("Selecione um cliente"); return; }
     if (!vendedor) { toast.error("Selecione um vendedor"); return; }
-    const c = clientes.find(cl => cl.Codigo === selectedCodigo);
-    const [y, m, d] = data.split("-");
-    const visita: Visita = {
-      codigo: selectedCodigo,
-      nome: c?.Nome || "",
-      vendedor,
-      data: `${d}/${m}/${y}`,
-      hora,
-      teve_venda: teveVenda,
-      observacao: obs,
-    };
-    await addVisita(visita);
-    setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
-    toast.success("Visita registrada!");
+    setRegistrando(true);
+    try {
+      const c = clientes.find(cl => cl.Codigo === selectedCodigo);
+      const [y, m, d] = data.split("-");
+      const visita: Visita = {
+        codigo: selectedCodigo,
+        nome: c?.Nome || "",
+        vendedor,
+        data: `${d}/${m}/${y}`,
+        hora,
+        teve_venda: teveVenda,
+        observacao: obs,
+      };
+      await addVisita(visita);
+      setSearch(""); setSelectedCodigo(""); setVendedor(""); setObs(""); setTeveVenda(false);
+      toast.success("Visita registrada!");
+    } catch (e: any) {
+      toast.error("Erro ao registrar visita: " + (e.message || e));
+    } finally {
+      setRegistrando(false);
+    }
   };
 
   const handleRemove = async (id: string) => {
     if (confirm("Remover este registro de visita?")) {
-      await removeVisita(id);
+      try {
+        await removeVisita(id);
+        toast.success("Visita removida");
+      } catch (e: any) {
+        toast.error("Erro ao remover: " + (e.message || e));
+      }
     }
   };
 
@@ -131,8 +144,8 @@ const RegistroVisitas: React.FC = () => {
             <Textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" rows={2} />
           </div>
         </div>
-        <Button className="mt-4" onClick={registrar}>
-          <CheckCircle size={16} className="mr-1" /> Registrar visita
+        <Button className="mt-4" onClick={registrar} disabled={registrando}>
+          <CheckCircle size={16} className="mr-1" /> {registrando ? "Registrando..." : "Registrar visita"}
         </Button>
       </div>
 
