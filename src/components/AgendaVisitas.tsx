@@ -46,7 +46,7 @@ const AgendaVisitas: React.FC<Props> = ({ clientes }) => {
             </div>
             <div className="space-y-2">
               {items.map(c => (
-                <div key={c.Codigo} className="flex items-center gap-4 text-sm py-1.5 border-b last:border-0">
+                <div key={c.Codigo} className="flex items-center gap-4 text-xs py-0.5 border-b last:border-0">
                   <span className="font-medium w-48 truncate">{c.Nome}</span>
                   <span className="text-muted-foreground w-20">{c.Vendedor || "—"}</span>
                   <span className="w-16">Ciclo: {c.Ciclo_Medio_d}d</span>
