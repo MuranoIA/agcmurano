@@ -109,6 +109,9 @@ const Dashboard: React.FC = () => {
           <TabsContent value="agenda">
             <AgendaVisitas clientes={filtered} />
           </TabsContent>
+          <TabsContent value="ranking">
+            <RankingTable clientes={filtered} />
+          </TabsContent>
           <TabsContent value="registro">
             <RegistroVisitas />
           </TabsContent>
