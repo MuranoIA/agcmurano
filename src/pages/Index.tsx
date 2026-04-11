@@ -85,6 +85,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="clientes">Lista de Clientes</TabsTrigger>
               <TabsTrigger value="heatmap">Heatmap Mensal</TabsTrigger>
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
+              <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
