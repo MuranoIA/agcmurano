@@ -130,6 +130,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
+              <TabsTrigger value="interior">Interior</TabsTrigger>
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
               <Download size={14} className="mr-1" /> Exportar CSV
