@@ -16,7 +16,7 @@ import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { downloadFile, exportCSV } from "@/lib/format";
+import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
 import { parseMesCol } from "@/lib/parseMesCol";
