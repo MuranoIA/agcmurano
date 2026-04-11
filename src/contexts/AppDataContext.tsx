@@ -23,6 +23,8 @@ interface AppState {
   visitas: (Visita & { id?: string })[];
   loading: boolean;
   apiCodigos: Set<string>;
+  lastApiUpdate: string | null;
+  forceApiRefresh: () => Promise<void>;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
@@ -55,16 +57,22 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState(true);
   const [apiOverlay, setApiOverlay] = useState<Record<string, number>>({});
   const [apiCodigos, setApiCodigos] = useState<Set<string>>(new Set());
+  const [lastApiUpdate, setLastApiUpdate] = useState<string | null>(null);
 
-  const fetchApiFaturamento = useCallback(async () => {
+  const fmtTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const fetchApiFaturamento = useCallback(async (showToasts = false) => {
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/fetch-faturamento`
       );
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
-      if (!Array.isArray(data)) return;
+      if (!Array.isArray(data)) throw new Error("Resposta inválida");
 
       const totals: Record<string, number> = {};
       data.forEach((item: any) => {
@@ -75,10 +83,19 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       setApiOverlay(totals);
       setApiCodigos(new Set(Object.keys(totals)));
+      const time = fmtTime();
+      setLastApiUpdate(time);
+      if (showToasts) toast.success(`✅ Dados atualizados às ${time}`);
     } catch (err) {
       console.warn("API faturamento indisponível:", err);
+      const time = lastApiUpdate || "--:--";
+      if (showToasts) {
+        toast.error(`⚠️ Falha ao atualizar dados da API. Última atualização: ${time}`);
+      } else {
+        toast(`⚠️ Falha ao atualizar dados da API. Última atualização: ${time}`, { duration: 4000 });
+      }
     }
-  }, []);
+  }, [lastApiUpdate]);
 
   const refreshData = useCallback(async () => {
     try {
@@ -108,13 +125,17 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return unsub;
   }, [refreshData]);
 
-  // Fetch API faturamento after data is loaded, then every 5 min
+  // Fetch API faturamento after data is loaded, then every 60 min
   useEffect(() => {
     if (!csvLoaded) return;
-    fetchApiFaturamento();
-    const interval = setInterval(fetchApiFaturamento, 5 * 60 * 1000);
+    fetchApiFaturamento(false);
+    const interval = setInterval(() => fetchApiFaturamento(false), 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, [csvLoaded, fetchApiFaturamento]);
+
+  const forceApiRefresh = useCallback(async () => {
+    await fetchApiFaturamento(true);
+  }, [fetchApiFaturamento]);
 
   const loadCSV = useCallback(async (text: string) => {
     setLoading(true);
@@ -195,6 +216,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
       apiCodigos,
+      lastApiUpdate,
+      forceApiRefresh,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,
