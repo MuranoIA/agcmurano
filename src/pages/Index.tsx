@@ -32,8 +32,11 @@ const Dashboard: React.FC = () => {
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(undefined);
   const [periodTo, setPeriodTo] = useState<Date | undefined>(undefined);
 
+  const clientesCapital = useMemo(() => clientes.filter(c => c.Segmento !== "interior"), [clientes]);
+  const clientesInterior = useMemo(() => clientes.filter(c => c.Segmento === "interior"), [clientes]);
+
   const filtered = useMemo(() => {
-    let list = clientes;
+    let list = clientesCapital;
     if (vendedor !== "Todos") list = list.filter(c => c.Vendedor === vendedor);
     if (status !== "Todos") list = list.filter(c => c.Status === status);
     if (busca) {
@@ -41,7 +44,22 @@ const Dashboard: React.FC = () => {
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientes, vendedor, status, busca]);
+  }, [clientesCapital, vendedor, status, busca]);
+
+  const [intVendedor, setIntVendedor] = useState("Todos");
+  const [intStatus, setIntStatus] = useState("Todos");
+  const [intBusca, setIntBusca] = useState("");
+
+  const filteredInterior = useMemo(() => {
+    let list = clientesInterior;
+    if (intVendedor !== "Todos") list = list.filter(c => c.Vendedor === intVendedor);
+    if (intStatus !== "Todos") list = list.filter(c => c.Status === intStatus);
+    if (intBusca) {
+      const term = intBusca.toLowerCase();
+      list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
+    }
+    return list;
+  }, [clientesInterior, intVendedor, intStatus, intBusca]);
 
   const filteredMesesCols = useMemo(() => {
     if (!periodFrom && !periodTo) return mesesCols;

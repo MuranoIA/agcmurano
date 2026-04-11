@@ -38,6 +38,7 @@ export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols:
     Fat_Total: r.fat_total || 0,
     Primeira_Compra: r.primeira_compra || "",
     Ultima_Compra: r.ultima_compra || "",
+    Segmento: r.segmento || "capital",
     meses: (r.meses as Record<string, number>) || {},
   }));
 
