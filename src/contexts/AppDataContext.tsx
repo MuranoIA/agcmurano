@@ -138,7 +138,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       mesesCols,
       csvLoaded,
       overlay,
-      visitas,
+      visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
       loadCSV,
       refreshData,
