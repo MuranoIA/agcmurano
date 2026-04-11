@@ -10,6 +10,7 @@ import HeatmapTable from "@/components/HeatmapTable";
 import AgendaVisitas from "@/components/AgendaVisitas";
 import RegistroVisitas from "@/components/RegistroVisitas";
 import RankingTable from "@/components/RankingTable";
+import VisaoGeral from "@/components/VisaoGeral";
 import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import { Cliente } from "@/lib/types";
@@ -79,9 +80,10 @@ const Dashboard: React.FC = () => {
         <KPIBar clientes={filtered} />
         <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
 
-        <Tabs defaultValue="clientes" className="mt-2">
+        <Tabs defaultValue={role === "admin" ? "visao" : "clientes"} className="mt-2">
           <div className="flex items-center justify-between mb-3">
             <TabsList>
+              {role === "admin" && <TabsTrigger value="visao">Visão Geral</TabsTrigger>}
               <TabsTrigger value="clientes">Lista de Clientes</TabsTrigger>
               <TabsTrigger value="heatmap">Heatmap Mensal</TabsTrigger>
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
@@ -92,6 +94,12 @@ const Dashboard: React.FC = () => {
               <Download size={14} className="mr-1" /> Exportar CSV
             </Button>
           </div>
+
+          {role === "admin" && (
+            <TabsContent value="visao">
+              <VisaoGeral clientes={filtered} />
+            </TabsContent>
+          )}
 
           <TabsContent value="clientes">
             {role === "admin" && (
