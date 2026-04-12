@@ -29,8 +29,14 @@ const Dashboard: React.FC = () => {
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showNovoCliente, setShowNovoCliente] = useState(false);
-  const [periodFrom, setPeriodFrom] = useState<Date | undefined>(undefined);
-  const [periodTo, setPeriodTo] = useState<Date | undefined>(undefined);
+  const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [periodTo, setPeriodTo] = useState<Date | undefined>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  });
 
   const clientesCapital = useMemo(() => clientes.filter(c => c.Segmento !== "interior"), [clientes]);
   const clientesInterior = useMemo(() => clientes.filter(c => c.Segmento === "interior"), [clientes]);
@@ -75,8 +81,9 @@ const Dashboard: React.FC = () => {
   const handleNewUpload = useCallback(() => {}, []);
 
   const handleResetPeriod = useCallback(() => {
-    setPeriodFrom(undefined);
-    setPeriodTo(undefined);
+    const now = new Date();
+    setPeriodFrom(new Date(now.getFullYear(), now.getMonth(), 1));
+    setPeriodTo(new Date(now.getFullYear(), now.getMonth() + 1, 0));
   }, []);
 
   const exportAll = () => {
