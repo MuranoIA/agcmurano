@@ -201,6 +201,10 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return c;
       });
     }
+    // Recalculate Objetivo_R$ as TM_Mes * 1.10
+    list = list.map(c => ({ ...c, Objetivo_R$: c.TM_Mes * 1.10 }));
+    // Filter out clients without vendedor
+    list = list.filter(c => !!c.Vendedor);
     if (role === "vendedor" && vendorName) {
       list = list.filter(c => c.Vendedor === vendorName);
     }

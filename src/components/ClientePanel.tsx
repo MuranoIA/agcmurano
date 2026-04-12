@@ -20,6 +20,12 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
   const last3 = mesesCols.slice(-3);
   const last3vals = last3.map(m => c.meses[m] || 0);
 
+  // Positivado no período (tem valor > 0 em algum mês)
+  const positivado = mesesCols.some(m => (c.meses[m] || 0) > 0);
+  const abrVal = c.meses["Abr/26"] || 0;
+  const pctRealizadoTM = c.TM_Mes > 0 ? (abrVal / c.TM_Mes) * 100 : 0;
+  const pctRealizadoObj = c.Objetivo_R$ > 0 ? (abrVal / c.Objetivo_R$) * 100 : 0;
+
   const insights: string[] = [];
   if (c.MCC === c.Meses_1a_Compra && c.MCC > 0) insights.push("✅ Presente em todos os meses — cliente âncora");
   if (c.Meses_1a_Compra > 0 && c.MCC < c.Meses_1a_Compra * 0.6) insights.push("⚠️ Comprando em menos de 60% dos meses disponíveis");
