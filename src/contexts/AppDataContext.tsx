@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Cliente, OverlayStore, Visita } from "@/lib/types";
 import { parseCSV } from "@/lib/csvParser";
 import {
@@ -11,7 +11,9 @@ import {
   dbAddVisita,
   dbRemoveVisita,
   subscribeToOverlayChanges,
+  bulkUpdateClienteFields,
 } from "@/lib/supabaseService";
+import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -190,6 +192,37 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setVisitas(prev => prev.filter(v => v.id !== id));
   }, []);
 
+  // Monthly recalculation persistence
+  const recalcRan = useRef(false);
+  useEffect(() => {
+    if (!csvLoaded || rawClientes.length === 0 || recalcRan.current) return;
+    const now = new Date();
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const lastKey = localStorage.getItem("ultimo_recalculo_mes");
+    if (lastKey === currentKey) return;
+    recalcRan.current = true;
+
+    const recalced = recalcAllClientes(rawClientes);
+    const rows = recalced.map(c => ({
+      codigo: c.Codigo,
+      tm_mes: c.TM_Mes,
+      ciclo_medio_d: c.Ciclo_Medio_d,
+      dias_sem_compra: c.Dias_Sem_Compra,
+      status: c.Status,
+      dias_para_acao: c.Dias_Para_Acao,
+      proxima_acao: c.Proxima_Acao,
+      objetivo_rs: c.Objetivo_R$,
+    }));
+    bulkUpdateClienteFields(rows).then(() => {
+      localStorage.setItem("ultimo_recalculo_mes", currentKey);
+      const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+      toast.success(`✅ Dados recalculados para ${meses[now.getMonth()]}/${String(now.getFullYear()).slice(2)}`);
+      refreshData();
+    }).catch(err => {
+      console.error("Erro no recálculo mensal:", err);
+    });
+  }, [csvLoaded, rawClientes, refreshData]);
+
   const clientes = useMemo(() => {
     let list = applyOverlay(rawClientes, overlay);
     // Apply API faturamento overlay for Abr/26
@@ -201,11 +234,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return c;
       });
     }
-    // Recalculate TM_Mes as Fat_Total / MCC, then Objetivo_R$ as TM_Mes * 1.10
-    list = list.map(c => {
-      const tmMes = c.MCC > 0 ? c.Fat_Total / c.MCC : 0;
-      return { ...c, TM_Mes: tmMes, Objetivo_R$: tmMes * 1.10 };
-    });
+    // Recalculate derived fields locally
+    list = recalcAllClientes(list);
     // Filter out clients without vendedor
     list = list.filter(c => !!c.Vendedor);
     if (role === "vendedor" && vendorName) {
