@@ -152,6 +152,23 @@ export async function dbRemoveVisita(id: string) {
   if (error) throw error;
 }
 
+// ---- BULK UPDATE CLIENTES (recalculated fields) ----
+
+export async function bulkUpdateClienteFields(clientes: { codigo: string; tm_mes: number; ciclo_medio_d: number; dias_sem_compra: number; status: string; dias_para_acao: number; proxima_acao: string; objetivo_rs: number }[]) {
+  for (const c of clientes) {
+    const { error } = await supabase.from("clientes").update({
+      tm_mes: c.tm_mes,
+      ciclo_medio_d: c.ciclo_medio_d,
+      dias_sem_compra: c.dias_sem_compra,
+      status: c.status,
+      dias_para_acao: c.dias_para_acao,
+      proxima_acao: c.proxima_acao,
+      objetivo_rs: c.objetivo_rs,
+    }).eq("codigo", c.codigo);
+    if (error) console.error("Erro update cliente", c.codigo, error);
+  }
+}
+
 // ---- FULL OVERLAY ----
 
 export async function fetchFullOverlay(): Promise<OverlayStore> {
