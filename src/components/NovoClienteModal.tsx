@@ -46,14 +46,6 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
     setFetchedData(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-cliente-api", {
-        body: null,
-        headers: {},
-        method: "GET",
-      });
-
-      // supabase.functions.invoke doesn't support query params well, use fetch directly
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
