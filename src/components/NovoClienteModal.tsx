@@ -219,7 +219,7 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
           </div>
 
           {apiWarning && (
-            <p className="text-sm text-yellow-600 bg-yellow-50 rounded px-3 py-2">{apiWarning}</p>
+            <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 rounded px-3 py-2">{apiWarning}</p>
           )}
 
           <div>
