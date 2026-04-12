@@ -82,6 +82,9 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
               ["Última Compra", c.Ultima_Compra],
               ["Fat. Total", fmtBRL(c.Fat_Total)],
               ["Nº Pedidos", String(c.N_Pedidos)],
+              ["Positivado", positivado ? "✅ Sim" : "❌ Não"],
+              ["% Real. vs TM", `${pctRealizadoTM.toFixed(1)}%`],
+              ["% Real. vs Obj.", `${pctRealizadoObj.toFixed(1)}%`],
             ].map(([label, val]) => (
               <div key={label} className="bg-muted/50 rounded-lg p-3 text-center">
                 <div className="text-xs text-muted-foreground">{label}</div>
