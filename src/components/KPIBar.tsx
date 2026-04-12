@@ -67,29 +67,39 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
 
   const fmtPct = (v: number) => `${v.toFixed(1)}%`;
 
-  const cards = [
+  const row1 = [
     { label: "Clientes", value: String(total), cls: "" },
     { label: "Fat. Total", value: fmtBRL(fatTotal), cls: "" },
     { label: "TM/Mês médio", value: fmtBRL(tmMesAvg), cls: "" },
-    { label: "Positivados", value: String(positivados), cls: "text-primary font-bold" },
-    { label: "TM/Mês Posit.", value: fmtBRL(tmPosAvg), cls: "" },
-    { label: "% Real. vs TM", value: fmtPct(pctRealizadoTMGeral), cls: pctRealizadoTMGeral >= 100 ? "text-green-600" : "text-yellow-600" },
-    { label: "% Real. vs TM Pos.", value: fmtPct(pctRealizadoTMPos), cls: pctRealizadoTMPos >= 100 ? "text-green-600" : "text-yellow-600" },
-    { label: "% Real. vs Obj.", value: fmtPct(pctRealizadoObj), cls: pctRealizadoObj >= 100 ? "text-green-600" : "text-yellow-600" },
     { label: "Ativos", value: String(ativos), cls: "badge-active" },
     { label: "Risco", value: String(risco), cls: "badge-risk" },
     { label: "Inativos", value: String(inativos), cls: "badge-inactive" },
     { label: "Esta semana", value: String(estaSemana), cls: "text-primary font-bold" },
   ];
 
-  return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3 mb-4">
+  const row2 = [
+    { label: "Positivados", value: String(positivados), cls: "text-primary font-bold" },
+    { label: "TM/Mês Posit.", value: fmtBRL(tmPosAvg), cls: "" },
+    { label: "% Real. vs TM", value: fmtPct(pctRealizadoTMGeral), cls: pctRealizadoTMGeral >= 100 ? "text-green-600" : "text-yellow-600" },
+    { label: "% Real. vs TM Pos.", value: fmtPct(pctRealizadoTMPos), cls: pctRealizadoTMPos >= 100 ? "text-green-600" : "text-yellow-600" },
+    { label: "% Real. vs Obj.", value: fmtPct(pctRealizadoObj), cls: pctRealizadoObj >= 100 ? "text-green-600" : "text-yellow-600" },
+  ];
+
+  const renderRow = (cards: typeof row1, cols: string) => (
+    <div className={`grid ${cols} gap-3`}>
       {cards.map(c => (
         <div key={c.label} className="bg-card rounded-lg shadow-sm border p-3 text-center">
           <div className="text-xs text-muted-foreground mb-1">{c.label}</div>
           <div className={`text-lg font-semibold ${c.cls}`}>{c.value}</div>
         </div>
       ))}
+    </div>
+  );
+
+  return (
+    <div className="space-y-3 mb-4">
+      {renderRow(row1, "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7")}
+      {renderRow(row2, "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")}
     </div>
   );
 };
