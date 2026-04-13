@@ -13,7 +13,7 @@ interface Props {
 }
 
 const Filters: React.FC<Props> = ({ vendedor, setVendedor, status, setStatus, busca, setBusca }) => {
-  const vendedorOpts = ["Todos", ...VENDEDORES];
+  const vendedorOpts = ["Todos", ...VENDEDORES, "Sem vendedor"];
   const statusOpts = ["Todos", "Ativo", "Risco", "Inativo"];
 
   return (

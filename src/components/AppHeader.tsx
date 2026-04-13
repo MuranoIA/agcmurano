@@ -1,6 +1,8 @@
 import React from "react";
-import { LogOut, RefreshCw } from "lucide-react";
+import { Upload, Download, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { downloadJSON } from "@/lib/format";
+import { toast } from "sonner";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -9,17 +11,31 @@ interface Props {
 }
 
 const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
-  const { csvLoaded, forceApiRefresh } = useAppData();
-  const { signOut, user } = useAuth();
+  const { csvLoaded, overlay } = useAppData();
+  const { signOut, user, role } = useAuth();
+
+  const handleExportOverlay = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dt = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const json = JSON.stringify({ exportado_em: dt, overlay }, null, 2);
+    downloadJSON(json, "grandes_contas_overlay.json");
+    toast.success("Overlay exportado com sucesso");
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-md">
       <div className="container flex items-center justify-between h-14 px-4">
         <h1 className="text-lg font-bold tracking-tight">Grandes Contas</h1>
         <div className="flex items-center gap-2">
-          {csvLoaded && (
-            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={forceApiRefresh}>
-              <RefreshCw size={16} className="mr-1" /> Atualizar agora
+          {role === "admin" && (
+            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={onNewUpload}>
+              <Upload size={16} className="mr-1" /> Novo CSV
+            </Button>
+          )}
+          {csvLoaded && role === "admin" && (
+            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleExportOverlay}>
+              <Download size={16} className="mr-1" /> Exportar overlay
             </Button>
           )}
           <span className="text-xs text-primary-foreground/70 hidden sm:inline">{user?.email}</span>

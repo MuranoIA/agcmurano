@@ -58,7 +58,6 @@ export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string
       Fat_Total: parseNum(get("Fat_Total")),
       Primeira_Compra: get("Primeira_Compra"),
       Ultima_Compra: get("Ultima_Compra"),
-      Segmento: get("Segmento") || "capital",
       meses,
     });
   }

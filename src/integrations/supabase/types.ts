@@ -31,7 +31,6 @@ export type Database = {
           objetivo_rs: number | null
           primeira_compra: string | null
           proxima_acao: string | null
-          segmento: string | null
           status: string | null
           tm_mes: number | null
           tm_pedido: number | null
@@ -55,7 +54,6 @@ export type Database = {
           objetivo_rs?: number | null
           primeira_compra?: string | null
           proxima_acao?: string | null
-          segmento?: string | null
           status?: string | null
           tm_mes?: number | null
           tm_pedido?: number | null
@@ -79,7 +77,6 @@ export type Database = {
           objetivo_rs?: number | null
           primeira_compra?: string | null
           proxima_acao?: string | null
-          segmento?: string | null
           status?: string | null
           tm_mes?: number | null
           tm_pedido?: number | null

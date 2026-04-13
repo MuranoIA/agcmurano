@@ -46,12 +46,12 @@ const AgendaVisitas: React.FC<Props> = ({ clientes }) => {
             </div>
             <div className="space-y-2">
               {items.map(c => (
-                <div key={c.Codigo} className="flex items-center gap-4 text-xs py-0.5 border-b last:border-0">
-                  <span className="font-medium w-56 truncate">{c.Nome}</span>
-                  <span className="text-muted-foreground w-24">{c.Vendedor || "—"}</span>
-                  <span className="w-24">Ciclo: {c.Ciclo_Medio_d}d</span>
-                  <span className="w-28">Dias s/C: {c.Dias_Sem_Compra}</span>
-                  <span className="w-32">{fmtBRL(c.TM_Mes)}</span>
+                <div key={c.Codigo} className="flex items-center gap-4 text-sm py-1.5 border-b last:border-0">
+                  <span className="font-medium w-48 truncate">{c.Nome}</span>
+                  <span className="text-muted-foreground w-20">{c.Vendedor || "—"}</span>
+                  <span className="w-16">Ciclo: {c.Ciclo_Medio_d}d</span>
+                  <span className="w-20">Dias s/C: {c.Dias_Sem_Compra}</span>
+                  <span className="w-28">{fmtBRL(c.TM_Mes)}</span>
                   <StatusBadge status={c.Status} />
                   <span className="text-xs flex-1">{c.Proxima_Acao}</span>
                 </div>

@@ -4,7 +4,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import { VENDEDORES } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Pencil, Check } from "lucide-react";
 
 interface Props {
   clientes: Cliente[];
@@ -14,10 +14,12 @@ interface Props {
 type SortKey = keyof Cliente | "lastMonth";
 
 const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
-  const { mesesCols, setVendedor } = useAppData();
+  const { mesesCols, overlay, setVendedor, setValorMes } = useAppData();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
   const [sortAsc, setSortAsc] = useState(false);
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const sorted = useMemo(() => {
     return [...clientes].sort((a, b) => {
@@ -56,6 +58,19 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
     setVendedor(codigo, v);
   };
 
+  const startEdit = (codigo: string, currentVal: number) => {
+    setEditingCell(codigo);
+    setEditValue(String(currentVal || ""));
+  };
+
+  const commitEdit = (codigo: string) => {
+    const val = parseFloat(editValue.replace(",", ".")) || 0;
+    setValorMes(codigo, lastMonth, val);
+    setEditingCell(null);
+  };
+
+  const isEdited = (codigo: string) => !!overlay.valores_mes[codigo]?.[lastMonth];
+
   return (
     <div className="overflow-x-auto rounded-lg border bg-card">
       <table className="w-full text-sm">
@@ -87,7 +102,29 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
               <td className="px-3 py-2 text-right">{c.Ciclo_Medio_d}</td>
               <td className="px-3 py-2 text-right">{fmtBRL(c.TM_Mes)}</td>
               <td className="px-3 py-2 text-right">{c.Objetivo_R$ ? fmtBRL(c.Objetivo_R$) : "—"}</td>
-              <td className="px-3 py-2 text-right">{fmtBRLShort(c.meses[lastMonth] || 0)}</td>
+              <td className="px-3 py-2 text-right" onClick={e => { e.stopPropagation(); startEdit(c.Codigo, c.meses[lastMonth] || 0); }}>
+                {editingCell === c.Codigo ? (
+                  <span className="flex items-center justify-end gap-1">
+                    <input
+                      autoFocus
+                      className="border rounded px-1 py-0.5 w-20 text-right text-xs"
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onBlur={() => commitEdit(c.Codigo)}
+                      onKeyDown={e => e.key === "Enter" && commitEdit(c.Codigo)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <button onClick={e => { e.stopPropagation(); commitEdit(c.Codigo); }} className="text-green-600 hover:text-green-800" title="Confirmar">
+                      <Check size={14} />
+                    </button>
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-end gap-1">
+                    {fmtBRLShort(c.meses[lastMonth] || 0)}
+                    {isEdited(c.Codigo) && <Pencil size={10} className="text-accent" />}
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2 text-center">{c.MCC}</td>
               <td className="px-3 py-2 text-right">{c.Dias_Sem_Compra}</td>
               <td className="px-3 py-2 text-xs">

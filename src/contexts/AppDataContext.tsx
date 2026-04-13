@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { Cliente, OverlayStore, Visita } from "@/lib/types";
 import { parseCSV } from "@/lib/csvParser";
 import {
@@ -8,13 +8,10 @@ import {
   fetchOverlayVisitas,
   dbSetVendedor,
   dbSetValorMes,
-  dbBulkSetValoresMes,
   dbAddVisita,
   dbRemoveVisita,
   subscribeToOverlayChanges,
-  bulkUpdateClienteFields,
 } from "@/lib/supabaseService";
-import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -25,9 +22,6 @@ interface AppState {
   overlay: OverlayStore;
   visitas: (Visita & { id?: string })[];
   loading: boolean;
-  apiCodigos: Set<string>;
-  lastApiUpdate: string | null;
-  forceApiRefresh: () => Promise<void>;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
@@ -58,63 +52,6 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
-  // apiOverlay: { codigo: { "Mmm/AA": valor } }
-  const [apiOverlay, setApiOverlay] = useState<Record<string, Record<string, number>>>({});
-  const [apiCodigos, setApiCodigos] = useState<Set<string>>(new Set());
-  const [lastApiUpdate, setLastApiUpdate] = useState<string | null>(null);
-
-  const fmtTime = () => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  };
-
-  const fetchApiFaturamento = useCallback(async (showToasts = false) => {
-    try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const baseUrl = `https://${projectId}.supabase.co/functions/v1/fetch-faturamento`;
-
-      const res = await fetch(`${baseUrl}?mode=all`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      if (data.error) throw new Error(data.error);
-
-      const totals: Record<string, Record<string, number>> = data.totals || {};
-      const allCodes = new Set<string>(Object.keys(totals));
-
-      setApiOverlay(totals);
-      setApiCodigos(allCodes);
-      const time = fmtTime();
-      setLastApiUpdate(time);
-
-      // Persist to overlay_valores_mes
-      const rows: { codigo: string; mes: string; valor: number }[] = [];
-      Object.entries(totals).forEach(([codigo, meses]) => {
-        Object.entries(meses).forEach(([mes, valor]) => {
-          rows.push({ codigo, mes, valor: Math.round(valor * 100) / 100 });
-        });
-      });
-      if (rows.length > 0) {
-        dbBulkSetValoresMes(rows).then(() => {
-          console.log(`✅ ${rows.length} registros de faturamento persistidos no banco`);
-        }).catch(err => {
-          console.warn("Erro ao persistir faturamento:", err);
-        });
-      }
-
-      const monthCount = data.months || "?";
-      const errCount = data.errors?.length || 0;
-      if (showToasts) toast.success(`✅ Dados atualizados às ${time} (${monthCount} meses${errCount > 0 ? `, ${errCount} erros` : ""})`);
-    } catch (err) {
-      console.warn("API faturamento indisponível:", err);
-      const time = lastApiUpdate || "--:--";
-      if (showToasts) {
-        toast.error(`⚠️ Falha ao atualizar dados da API. Última atualização: ${time}`);
-      } else {
-        toast(`⚠️ Falha ao atualizar dados da API. Última atualização: ${time}`, { duration: 4000 });
-      }
-    }
-  }, [lastApiUpdate]);
 
   const refreshData = useCallback(async () => {
     try {
@@ -143,18 +80,6 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     return unsub;
   }, [refreshData]);
-
-  // Fetch API faturamento after data is loaded, then every 60 min
-  useEffect(() => {
-    if (!csvLoaded) return;
-    fetchApiFaturamento(false);
-    const interval = setInterval(() => fetchApiFaturamento(false), 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [csvLoaded, fetchApiFaturamento]);
-
-  const forceApiRefresh = useCallback(async () => {
-    await fetchApiFaturamento(true);
-  }, [fetchApiFaturamento]);
 
   const loadCSV = useCallback(async (text: string) => {
     setLoading(true);
@@ -209,62 +134,13 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setVisitas(prev => prev.filter(v => v.id !== id));
   }, []);
 
-  // Monthly recalculation persistence
-  const recalcRan = useRef(false);
-  useEffect(() => {
-    if (!csvLoaded || rawClientes.length === 0 || recalcRan.current) return;
-    const now = new Date();
-    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const lastKey = localStorage.getItem("ultimo_recalculo_mes");
-    if (lastKey === currentKey) return;
-    recalcRan.current = true;
-
-    const recalced = recalcAllClientes(rawClientes);
-    const rows = recalced.map(c => ({
-      codigo: c.Codigo,
-      tm_mes: c.TM_Mes,
-      ciclo_medio_d: c.Ciclo_Medio_d,
-      dias_sem_compra: c.Dias_Sem_Compra,
-      status: c.Status,
-      dias_para_acao: c.Dias_Para_Acao,
-      proxima_acao: c.Proxima_Acao,
-      objetivo_rs: c.Objetivo_R$,
-    }));
-    bulkUpdateClienteFields(rows).then(() => {
-      localStorage.setItem("ultimo_recalculo_mes", currentKey);
-      const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-      toast.success(`✅ Dados recalculados para ${meses[now.getMonth()]}/${String(now.getFullYear()).slice(2)}`);
-      refreshData();
-    }).catch(err => {
-      console.error("Erro no recálculo mensal:", err);
-    });
-  }, [csvLoaded, rawClientes, refreshData]);
-
   const clientes = useMemo(() => {
     let list = applyOverlay(rawClientes, overlay);
-    // Apply API faturamento overlay for all months
-    if (Object.keys(apiOverlay).length > 0) {
-      list = list.map(c => {
-        const clientOverlay = apiOverlay[c.Codigo];
-        if (clientOverlay) {
-          const newMeses = { ...c.meses };
-          Object.entries(clientOverlay).forEach(([mes, valor]) => {
-            newMeses[mes] = valor;
-          });
-          return { ...c, meses: newMeses };
-        }
-        return c;
-      });
-    }
-    // Recalculate derived fields locally
-    list = recalcAllClientes(list);
-    // Filter out clients without vendedor
-    list = list.filter(c => !!c.Vendedor);
     if (role === "vendedor" && vendorName) {
       list = list.filter(c => c.Vendedor === vendorName);
     }
     return list;
-  }, [rawClientes, overlay, apiOverlay, role, vendorName]);
+  }, [rawClientes, overlay, role, vendorName]);
 
   return (
     <Ctx.Provider value={{
@@ -274,9 +150,6 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       overlay,
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
-      apiCodigos,
-      lastApiUpdate,
-      forceApiRefresh,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,

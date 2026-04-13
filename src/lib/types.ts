@@ -16,7 +16,6 @@ export interface Cliente {
   Fat_Total: number;
   Primeira_Compra: string;
   Ultima_Compra: string;
-  Segmento: string;
   meses: Record<string, number>; // "Jan/25" -> value
 }
 
