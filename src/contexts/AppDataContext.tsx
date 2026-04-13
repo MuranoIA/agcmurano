@@ -57,7 +57,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [apiOverlay, setApiOverlay] = useState<Record<string, number>>({});
+  // apiOverlay: { codigo: { "Mmm/AA": valor } }
+  const [apiOverlay, setApiOverlay] = useState<Record<string, Record<string, number>>>({});
   const [apiCodigos, setApiCodigos] = useState<Set<string>>(new Set());
   const [lastApiUpdate, setLastApiUpdate] = useState<string | null>(null);
 
