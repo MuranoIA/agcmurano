@@ -24,9 +24,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const dataInicio = url.searchParams.get('data_inicio');
+    const dataFim = url.searchParams.get('data_fim');
+
     const token = await getToken();
 
-    const res = await fetch(`${API_BASE}/claude/faturamento`, {
+    let apiUrl = `${API_BASE}/claude/faturamento`;
+    if (dataInicio && dataFim) {
+      apiUrl += `?data_inicio=${dataInicio}&data_fim=${dataFim}`;
+    }
+
+    const res = await fetch(apiUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
 

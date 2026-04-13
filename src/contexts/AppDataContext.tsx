@@ -57,7 +57,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [apiOverlay, setApiOverlay] = useState<Record<string, number>>({});
+  // apiOverlay: { codigo: { "Mmm/AA": valor } }
+  const [apiOverlay, setApiOverlay] = useState<Record<string, Record<string, number>>>({});
   const [apiCodigos, setApiCodigos] = useState<Set<string>>(new Set());
   const [lastApiUpdate, setLastApiUpdate] = useState<string | null>(null);
 
@@ -69,25 +70,58 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const fetchApiFaturamento = useCallback(async (showToasts = false) => {
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/fetch-faturamento`
-      );
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const data = await res.json();
-      if (!Array.isArray(data)) throw new Error("Resposta inválida");
+      const baseUrl = `https://${projectId}.supabase.co/functions/v1/fetch-faturamento`;
 
-      const totals: Record<string, number> = {};
-      data.forEach((item: any) => {
-        if (item.tipo === "VENDA" && item.codigo_cliente) {
-          const code = String(item.codigo_cliente);
-          totals[code] = (totals[code] || 0) + (Number(item.valor) || 0);
-        }
+      // Build month ranges from Jan/2025 to current month
+      const now = new Date();
+      const months: { start: string; end: string; label: string }[] = [];
+      const mesesNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+      let y = 2025, m = 0; // Jan 2025
+      while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())) {
+        const start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        const end = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
+        const label = `${mesesNomes[m]}/${String(y).slice(2)}`;
+        months.push({ start, end, label });
+        m++;
+        if (m > 11) { m = 0; y++; }
+      }
+
+      // Fetch all months in parallel (batches of 4 to avoid overload)
+      const allData: { label: string; items: any[] }[] = [];
+      for (let i = 0; i < months.length; i += 4) {
+        const batch = months.slice(i, i + 4);
+        const results = await Promise.all(
+          batch.map(async (mo) => {
+            const res = await fetch(`${baseUrl}?data_inicio=${mo.start}&data_fim=${mo.end}`);
+            if (!res.ok) return { label: mo.label, items: [] };
+            const data = await res.json();
+            return { label: mo.label, items: Array.isArray(data) ? data : [] };
+          })
+        );
+        allData.push(...results);
+      }
+
+      // Group by codigo + month label
+      const totals: Record<string, Record<string, number>> = {};
+      const allCodes = new Set<string>();
+      allData.forEach(({ label, items }) => {
+        items.forEach((item: any) => {
+          if (item.tipo === "VENDA" && item.codigo_cliente) {
+            const code = String(item.codigo_cliente);
+            allCodes.add(code);
+            if (!totals[code]) totals[code] = {};
+            totals[code][label] = (totals[code][label] || 0) + (Number(item.valor) || 0);
+          }
+        });
       });
+
       setApiOverlay(totals);
-      setApiCodigos(new Set(Object.keys(totals)));
+      setApiCodigos(allCodes);
       const time = fmtTime();
       setLastApiUpdate(time);
-      if (showToasts) toast.success(`✅ Dados atualizados às ${time}`);
+      if (showToasts) toast.success(`✅ Dados atualizados às ${time} (${months.length} meses)`);
     } catch (err) {
       console.warn("API faturamento indisponível:", err);
       const time = lastApiUpdate || "--:--";
@@ -225,11 +259,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const clientes = useMemo(() => {
     let list = applyOverlay(rawClientes, overlay);
-    // Apply API faturamento overlay for Abr/26
+    // Apply API faturamento overlay for all months
     if (Object.keys(apiOverlay).length > 0) {
       list = list.map(c => {
-        if (apiOverlay[c.Codigo] !== undefined) {
-          return { ...c, meses: { ...c.meses, "Abr/26": apiOverlay[c.Codigo] } };
+        const clientOverlay = apiOverlay[c.Codigo];
+        if (clientOverlay) {
+          const newMeses = { ...c.meses };
+          Object.entries(clientOverlay).forEach(([mes, valor]) => {
+            newMeses[mes] = valor;
+          });
+          return { ...c, meses: newMeses };
         }
         return c;
       });
