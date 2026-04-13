@@ -8,6 +8,7 @@ import {
   fetchOverlayVisitas,
   dbSetVendedor,
   dbSetValorMes,
+  dbBulkSetValoresMes,
   dbAddVisita,
   dbRemoveVisita,
   subscribeToOverlayChanges,
@@ -121,6 +122,22 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setApiCodigos(allCodes);
       const time = fmtTime();
       setLastApiUpdate(time);
+
+      // Persist to overlay_valores_mes so data survives page reloads
+      const rows: { codigo: string; mes: string; valor: number }[] = [];
+      Object.entries(totals).forEach(([codigo, meses]) => {
+        Object.entries(meses).forEach(([mes, valor]) => {
+          rows.push({ codigo, mes, valor: Math.round(valor * 100) / 100 });
+        });
+      });
+      if (rows.length > 0) {
+        dbBulkSetValoresMes(rows).then(() => {
+          console.log(`✅ ${rows.length} registros de faturamento persistidos no banco`);
+        }).catch(err => {
+          console.warn("Erro ao persistir faturamento:", err);
+        });
+      }
+
       if (showToasts) toast.success(`✅ Dados atualizados às ${time} (${months.length} meses)`);
     } catch (err) {
       console.warn("API faturamento indisponível:", err);

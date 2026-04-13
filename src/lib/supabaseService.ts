@@ -117,6 +117,20 @@ export async function dbSetValorMes(codigo: string, mes: string, valor: number) 
   if (error) throw error;
 }
 
+export async function dbBulkSetValoresMes(rows: { codigo: string; mes: string; valor: number }[]) {
+  // Upsert in batches of 200
+  for (let i = 0; i < rows.length; i += 200) {
+    const batch = rows.slice(i, i + 200);
+    const { error } = await supabase.from("overlay_valores_mes").upsert(
+      batch,
+      { onConflict: "codigo,mes" }
+    );
+    if (error) {
+      console.error("Erro bulk upsert overlay_valores_mes batch", i, error);
+    }
+  }
+}
+
 // ---- OVERLAY: VISITAS ----
 
 export async function fetchOverlayVisitas(): Promise<(Visita & { id: string })[]> {
