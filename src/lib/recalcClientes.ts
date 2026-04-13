@@ -52,7 +52,9 @@ export function recalcCliente(c: Cliente): Cliente {
     proximaAcao = "Reativação crítica";
   }
 
-  const objetivoRs = tmMes * 1.10;
+  // Objetivo only goes UP – keep the higher of current vs new calculation
+  const novoObjetivo = tmMes * 1.10;
+  const objetivoRs = (c.Objetivo_R$ && c.Objetivo_R$ > novoObjetivo) ? c.Objetivo_R$ : novoObjetivo;
 
   return {
     ...c,
