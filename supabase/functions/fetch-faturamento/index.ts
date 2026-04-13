@@ -5,8 +5,25 @@ const corsHeaders = {
 
 const API_BASE = 'https://apiconsultacliente.muranoprofessional.com.br';
 
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeout);
+      return res;
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      // Wait 2s, 4s before retrying
+      await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+    }
+  }
+  throw new Error('Max retries reached');
+}
+
 async function getToken(): Promise<string> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await fetchWithRetry(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ usuario: 'venus', senha: 'consultacliente' }),
@@ -35,7 +52,7 @@ Deno.serve(async (req) => {
       apiUrl += `?data_inicio=${dataInicio}&data_fim=${dataFim}`;
     }
 
-    const res = await fetch(apiUrl, {
+    const res = await fetchWithRetry(apiUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
 
