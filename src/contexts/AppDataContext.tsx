@@ -73,57 +73,21 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const baseUrl = `https://${projectId}.supabase.co/functions/v1/fetch-faturamento`;
 
-      // Build month ranges from Jan/2025 to current month
-      const now = new Date();
-      const months: { start: string; end: string; label: string }[] = [];
-      const mesesNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+      const res = await fetch(`${baseUrl}?mode=all`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
 
-      let y = 2025, m = 0; // Jan 2025
-      while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())) {
-        const start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
-        const lastDay = new Date(y, m + 1, 0).getDate();
-        const end = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
-        const label = `${mesesNomes[m]}/${String(y).slice(2)}`;
-        months.push({ start, end, label });
-        m++;
-        if (m > 11) { m = 0; y++; }
-      }
+      if (data.error) throw new Error(data.error);
 
-      // Fetch all months in parallel (batches of 4 to avoid overload)
-      const allData: { label: string; items: any[] }[] = [];
-      for (let i = 0; i < months.length; i += 4) {
-        const batch = months.slice(i, i + 4);
-        const results = await Promise.all(
-          batch.map(async (mo) => {
-            const res = await fetch(`${baseUrl}?data_inicio=${mo.start}&data_fim=${mo.end}`);
-            if (!res.ok) return { label: mo.label, items: [] };
-            const data = await res.json();
-            return { label: mo.label, items: Array.isArray(data) ? data : [] };
-          })
-        );
-        allData.push(...results);
-      }
-
-      // Group by codigo + month label
-      const totals: Record<string, Record<string, number>> = {};
-      const allCodes = new Set<string>();
-      allData.forEach(({ label, items }) => {
-        items.forEach((item: any) => {
-          if (item.tipo === "VENDA" && item.codigo_cliente) {
-            const code = String(item.codigo_cliente);
-            allCodes.add(code);
-            if (!totals[code]) totals[code] = {};
-            totals[code][label] = (totals[code][label] || 0) + (Number(item.valor) || 0);
-          }
-        });
-      });
+      const totals: Record<string, Record<string, number>> = data.totals || {};
+      const allCodes = new Set<string>(Object.keys(totals));
 
       setApiOverlay(totals);
       setApiCodigos(allCodes);
       const time = fmtTime();
       setLastApiUpdate(time);
 
-      // Persist to overlay_valores_mes so data survives page reloads
+      // Persist to overlay_valores_mes
       const rows: { codigo: string; mes: string; valor: number }[] = [];
       Object.entries(totals).forEach(([codigo, meses]) => {
         Object.entries(meses).forEach(([mes, valor]) => {
@@ -138,7 +102,9 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
       }
 
-      if (showToasts) toast.success(`✅ Dados atualizados às ${time} (${months.length} meses)`);
+      const monthCount = data.months || "?";
+      const errCount = data.errors?.length || 0;
+      if (showToasts) toast.success(`✅ Dados atualizados às ${time} (${monthCount} meses${errCount > 0 ? `, ${errCount} erros` : ""})`);
     } catch (err) {
       console.warn("API faturamento indisponível:", err);
       const time = lastApiUpdate || "--:--";
