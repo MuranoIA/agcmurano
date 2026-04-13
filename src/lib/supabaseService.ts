@@ -110,10 +110,20 @@ export async function dbSetVendedor(codigo: string, vendedor: string) {
 // ---- OVERLAY: VALORES MES ----
 
 export async function fetchOverlayValoresMes(): Promise<Record<string, Record<string, number>>> {
-  const { data, error } = await supabase.from("overlay_valores_mes").select("*");
-  if (error) throw error;
+  // Paginate to get ALL overlay values (Supabase default limit is 1000)
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase.from("overlay_valores_mes").select("*").range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
   const map: Record<string, Record<string, number>> = {};
-  data?.forEach(r => {
+  allData.forEach(r => {
     if (!map[r.codigo]) map[r.codigo] = {};
     map[r.codigo][r.mes] = r.valor;
   });
