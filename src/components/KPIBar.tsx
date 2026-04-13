@@ -77,12 +77,54 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
     { label: "Esta semana", value: String(estaSemana), cls: "text-primary font-bold" },
   ];
 
+  // Clientes positivados acima/abaixo do TM
+  const acimaTM = useMemo(() => {
+    return clientes.filter(c => {
+      const fat = mesesCols && mesesCols.length > 0
+        ? mesesCols.reduce((s, m) => s + (c.meses[m] || 0), 0) / mesesCols.length
+        : c.Fat_Total;
+      return fat > 0 && fat >= c.TM_Mes;
+    }).length;
+  }, [clientes, mesesCols]);
+
+  const abaixoTM = useMemo(() => {
+    return clientes.filter(c => {
+      const fat = mesesCols && mesesCols.length > 0
+        ? mesesCols.reduce((s, m) => s + (c.meses[m] || 0), 0) / mesesCols.length
+        : c.Fat_Total;
+      return fat > 0 && fat < c.TM_Mes;
+    }).length;
+  }, [clientes, mesesCols]);
+
+  // Clientes positivados acima/abaixo do Objetivo
+  const acimaObj = useMemo(() => {
+    return clientes.filter(c => {
+      const fat = mesesCols && mesesCols.length > 0
+        ? mesesCols.reduce((s, m) => s + (c.meses[m] || 0), 0) / mesesCols.length
+        : c.Fat_Total;
+      return fat > 0 && c.Objetivo_R$ > 0 && fat >= c.Objetivo_R$;
+    }).length;
+  }, [clientes, mesesCols]);
+
+  const abaixoObj = useMemo(() => {
+    return clientes.filter(c => {
+      const fat = mesesCols && mesesCols.length > 0
+        ? mesesCols.reduce((s, m) => s + (c.meses[m] || 0), 0) / mesesCols.length
+        : c.Fat_Total;
+      return fat > 0 && c.Objetivo_R$ > 0 && fat < c.Objetivo_R$;
+    }).length;
+  }, [clientes, mesesCols]);
+
   const row2 = [
     { label: "Positivados", value: String(positivados), cls: "text-primary font-bold" },
     { label: "TM/Mês Posit.", value: fmtBRL(tmPosAvg), cls: "" },
     { label: "% Real. vs TM", value: fmtPct(pctRealizadoTMGeral), cls: pctRealizadoTMGeral >= 100 ? "text-green-600" : "text-yellow-600" },
     { label: "% Real. vs TM Pos.", value: fmtPct(pctRealizadoTMPos), cls: pctRealizadoTMPos >= 100 ? "text-green-600" : "text-yellow-600" },
     { label: "% Real. vs Obj.", value: fmtPct(pctRealizadoObj), cls: pctRealizadoObj >= 100 ? "text-green-600" : "text-yellow-600" },
+    { label: "≥ TM", value: String(acimaTM), cls: "text-green-600 font-bold" },
+    { label: "< TM", value: String(abaixoTM), cls: "text-yellow-600 font-bold" },
+    { label: "≥ Obj.", value: String(acimaObj), cls: "text-green-600 font-bold" },
+    { label: "< Obj.", value: String(abaixoObj), cls: "text-yellow-600 font-bold" },
   ];
 
   const renderRow = (cards: typeof row1, cols: string) => (
@@ -99,7 +141,7 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
   return (
     <div className="space-y-3 mb-4">
       {renderRow(row1, "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7")}
-      {renderRow(row2, "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")}
+      {renderRow(row2, "grid-cols-3 sm:grid-cols-5 lg:grid-cols-9")}
     </div>
   );
 };
