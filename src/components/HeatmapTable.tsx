@@ -95,6 +95,24 @@ const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) =
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="bg-muted/70 font-semibold border-t-2 border-border">
+              <td className="sticky left-0 z-10 bg-muted/70 px-3 py-2 border-r" colSpan={2}>
+                Total ({filtered.length} clientes)
+              </td>
+              <td className="sticky left-[260px] z-10 bg-muted/70 px-3 py-2 text-right border-r">
+                {fmtBRLShort(filtered.reduce((s, c) => s + (c.TM_Mes || 0), 0) / (filtered.length || 1))}
+              </td>
+              {mesesCols.map(m => {
+                const total = filtered.reduce((s, c) => s + (c.meses[m] || 0), 0);
+                return (
+                  <td key={m} className="px-1 py-2 text-center font-semibold">
+                    {total > 0 ? fmtBRLShort(total) : "—"}
+                  </td>
+                );
+              })}
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
