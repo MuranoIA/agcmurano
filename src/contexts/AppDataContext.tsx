@@ -259,11 +259,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const clientes = useMemo(() => {
     let list = applyOverlay(rawClientes, overlay);
-    // Apply API faturamento overlay for Abr/26
+    // Apply API faturamento overlay for all months
     if (Object.keys(apiOverlay).length > 0) {
       list = list.map(c => {
-        if (apiOverlay[c.Codigo] !== undefined) {
-          return { ...c, meses: { ...c.meses, "Abr/26": apiOverlay[c.Codigo] } };
+        const clientOverlay = apiOverlay[c.Codigo];
+        if (clientOverlay) {
+          const newMeses = { ...c.meses };
+          Object.entries(clientOverlay).forEach(([mes, valor]) => {
+            newMeses[mes] = valor;
+          });
+          return { ...c, meses: newMeses };
         }
         return c;
       });
