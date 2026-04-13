@@ -5,9 +5,20 @@ import { Json } from "@/integrations/supabase/types";
 // ---- CLIENTES ----
 
 export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
-  const { data, error } = await supabase.from("clientes").select("*");
-  if (error) throw error;
-  if (!data || data.length === 0) return { clientes: [], mesesCols: [] };
+  // Paginate to get ALL clients (Supabase default limit is 1000)
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase.from("clientes").select("*").range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  if (allData.length === 0) return { clientes: [], mesesCols: [] };
+  const data = allData;
 
   // Detect month columns from the first record's meses JSONB
   const sampleMeses = (data[0].meses as Record<string, number>) || {};
@@ -99,10 +110,20 @@ export async function dbSetVendedor(codigo: string, vendedor: string) {
 // ---- OVERLAY: VALORES MES ----
 
 export async function fetchOverlayValoresMes(): Promise<Record<string, Record<string, number>>> {
-  const { data, error } = await supabase.from("overlay_valores_mes").select("*");
-  if (error) throw error;
+  // Paginate to get ALL overlay values (Supabase default limit is 1000)
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase.from("overlay_valores_mes").select("*").range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
   const map: Record<string, Record<string, number>> = {};
-  data?.forEach(r => {
+  allData.forEach(r => {
     if (!map[r.codigo]) map[r.codigo] = {};
     map[r.codigo][r.mes] = r.valor;
   });
