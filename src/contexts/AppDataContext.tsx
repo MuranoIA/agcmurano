@@ -148,7 +148,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (!csvLoaded) return;
     fetchApiFaturamento(false);
-    const interval = setInterval(() => fetchApiFaturamento(false), 60 * 60 * 1000);
+    const interval = setInterval(() => fetchApiFaturamento(false), 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [csvLoaded, fetchApiFaturamento]);
 
