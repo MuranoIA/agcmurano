@@ -36,15 +36,16 @@ async function getToken(): Promise<string> {
 function buildMonthRanges(): { start: string; end: string; label: string }[] {
   const now = new Date();
   const months: { start: string; end: string; label: string }[] = [];
-  let y = 2025, m = 0;
-  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())) {
+  // Last 12 months including current month
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
     const start = `${y}-${String(m + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(y, m + 1, 0).getDate();
     const end = `${y}-${String(m + 1).padStart(2, '0')}-${lastDay}`;
     const label = `${MESES_NOMES[m]}/${String(y).slice(2)}`;
     months.push({ start, end, label });
-    m++;
-    if (m > 11) { m = 0; y++; }
   }
   return months;
 }
