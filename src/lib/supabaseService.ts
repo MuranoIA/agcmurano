@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { externalSupabase } from "@/integrations/supabase/externalClient";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
-import { Pedido, processPedidos } from "./csvParser";
+import { Pedido, parsePedidoDate, processPedidos } from "./csvParser";
 
 // ---- VENDEDOR NAME NORMALIZATION ----
 
@@ -57,7 +57,7 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
     nome: r.nome,
     vendedor: normalizeVendedorCSV(r.vendedor),
     valor: Number(r.valor) || 0,
-    data: new Date(r.data),
+    data: parsePedidoDate(r.data),
     tipo: r.tipo as "VENDA" | "DEV",
   }));
 

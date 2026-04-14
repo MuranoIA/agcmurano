@@ -2,6 +2,8 @@ import { Cliente } from "./types";
 
 const MESES_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
+const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 function normalizeVendedor(v: string): string {
   const map: Record<string, string> = {
     "jaques": "Jacques", "jacques": "Jacques", "hugo": "Hugo", "maiara": "Maiara",
@@ -18,6 +20,27 @@ function parseNum(v: string): number {
 
 function fmtMesCol(d: Date): string {
   return `${MESES_PT[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
+}
+
+export function formatDateOnly(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function parsePedidoDate(value: string): Date {
+  const trimmed = value.trim();
+  const dateOnlyMatch = trimmed.match(DATE_ONLY_REGEX);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(trimmed);
+  if (isNaN(parsed.getTime())) return parsed;
+
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -69,7 +92,7 @@ export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string
     const tipo = get(iTipo).toUpperCase();
     if (tipo !== "VENDA" && tipo !== "DEV") continue;
     const dataStr = get(iData);
-    const data = new Date(dataStr);
+    const data = parsePedidoDate(dataStr);
     if (isNaN(data.getTime())) continue;
 
     pedidos.push({
@@ -131,8 +154,8 @@ export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesC
     const mcc = Object.values(mesesMap).filter(v => v > 0).length;
 
     // Ciclo Médio - average days between consecutive unique purchase dates (VENDA only)
-    const uniqueVendaDates = [...new Set(vendaDates.map(d => d.toISOString().split("T")[0]))]
-      .map(s => new Date(s))
+    const uniqueVendaDates = [...new Set(vendaDates.map(formatDateOnly))]
+      .map(s => parsePedidoDate(s))
       .sort((a, b) => a.getTime() - b.getTime());
     let cicloMedio = 0;
     if (uniqueVendaDates.length > 1) {
@@ -197,8 +220,8 @@ export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesC
       Proxima_Acao: proximaAcao,
       N_Pedidos: nPedidos,
       Fat_Total: fatTotal,
-      Primeira_Compra: primeiraCompra.toISOString().split("T")[0],
-      Ultima_Compra: ultimaCompra.toISOString().split("T")[0],
+      Primeira_Compra: formatDateOnly(primeiraCompra),
+      Ultima_Compra: formatDateOnly(ultimaCompra),
       Segmento: segmento,
       meses: mesesMap,
     };
