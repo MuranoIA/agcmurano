@@ -37,11 +37,11 @@ interface AppState {
 const Ctx = createContext<AppState>(null!);
 export const useAppData = () => useContext(Ctx);
 
-function applyOverlay(raw: Cliente[], overlay: OverlayStore): Cliente[] {
+function applyOverlay(raw: Cliente[], overlay: OverlayStore, skipValoresMes = false): Cliente[] {
   return raw.map(c => {
     const vendedor = overlay.vendedores[c.Codigo] || c.Vendedor;
     const meses = { ...c.meses };
-    if (overlay.valores_mes[c.Codigo]) {
+    if (!skipValoresMes && overlay.valores_mes[c.Codigo]) {
       Object.entries(overlay.valores_mes[c.Codigo]).forEach(([m, v]) => { meses[m] = v; });
     }
     return { ...c, Vendedor: vendedor, meses };
