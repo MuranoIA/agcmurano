@@ -2,6 +2,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
 
+// ---- VENDEDOR NAME NORMALIZATION ----
+
+const VENDEDOR_NORMALIZE: Record<string, string> = {
+  "jaques": "Jacques",
+  "jacques": "Jacques",
+  "hugo": "Hugo",
+  "maiara": "Maiara",
+  "jacques interior": "Jacques Interior",
+  "jaques interior": "Jacques Interior",
+  "hugo interior": "Hugo Interior",
+  "maiara interior": "Maiara Interior",
+};
+
+function normalizeVendedor(v: string | null | undefined): string {
+  if (!v) return "";
+  const key = v.trim().toLowerCase();
+  return VENDEDOR_NORMALIZE[key] || v;
+}
+
 // ---- CLIENTES ----
 
 export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
@@ -34,7 +53,7 @@ export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols:
   const clientes: Cliente[] = data.map(r => ({
     Codigo: r.codigo,
     Nome: r.nome,
-    Vendedor: r.vendedor || "",
+    Vendedor: normalizeVendedor(r.vendedor),
     Objetivo_R$: r.objetivo_rs || 0,
     TM_Mes: r.tm_mes || 0,
     TM_Pedido: r.tm_pedido || 0,
@@ -95,7 +114,7 @@ export async function fetchOverlayVendedores(): Promise<Record<string, string>> 
   const { data, error } = await supabase.from("overlay_vendedores").select("*");
   if (error) throw error;
   const map: Record<string, string> = {};
-  data?.forEach(r => { map[r.codigo] = r.vendedor; });
+  data?.forEach(r => { map[r.codigo] = normalizeVendedor(r.vendedor); });
   return map;
 }
 
