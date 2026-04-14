@@ -139,7 +139,7 @@ export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string
       for (let i = 1; i < uniqueVendaDates.length; i++) {
         totalDays += daysBetween(uniqueVendaDates[i - 1], uniqueVendaDates[i]);
       }
-      cicloMedio = totalDays / (uniqueVendaDates.length - 1);
+      cicloMedio = Math.round((totalDays / (uniqueVendaDates.length - 1)) * 10) / 10;
     }
 
     // TM_Mes - based on 11 months before current month
