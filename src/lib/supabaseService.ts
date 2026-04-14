@@ -114,7 +114,7 @@ export async function fetchOverlayVendedores(): Promise<Record<string, string>> 
   const { data, error } = await supabase.from("overlay_vendedores").select("*");
   if (error) throw error;
   const map: Record<string, string> = {};
-  data?.forEach(r => { map[r.codigo] = r.vendedor; });
+  data?.forEach(r => { map[r.codigo] = normalizeVendedor(r.vendedor); });
   return map;
 }
 
