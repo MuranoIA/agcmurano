@@ -1,5 +1,5 @@
-import React from "react";
-import { LogOut, RefreshCw } from "lucide-react";
+import React, { useRef, useCallback } from "react";
+import { LogOut, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,14 +9,42 @@ interface Props {
 }
 
 const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
-  const { csvLoaded, forceApiRefresh } = useAppData();
-  const { signOut, user } = useAuth();
+  const { csvLoaded, forceApiRefresh, loadCSV } = useAppData();
+  const { signOut, user, role } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (text) loadCSV(text);
+    };
+    reader.readAsText(file, "UTF-8");
+  }, [loadCSV]);
 
   return (
     <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-md">
       <div className="container flex items-center justify-between h-14 px-4">
         <h1 className="text-lg font-bold tracking-tight">Grandes Contas</h1>
         <div className="flex items-center gap-2">
+          {role === "admin" && (
+            <>
+              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={() => fileRef.current?.click()}>
+                <Upload size={16} className="mr-1" /> Subir CSV
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,.txt"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </>
+          )}
           {csvLoaded && (
             <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={forceApiRefresh}>
               <RefreshCw size={16} className="mr-1" /> Atualizar agora
