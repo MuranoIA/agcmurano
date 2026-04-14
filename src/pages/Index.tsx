@@ -38,8 +38,9 @@ const Dashboard: React.FC = () => {
     return new Date(now.getFullYear(), now.getMonth() + 1, 0);
   });
 
-  const clientesCapital = useMemo(() => clientes.filter(c => c.Segmento !== "interior"), [clientes]);
-  const clientesInterior = useMemo(() => clientes.filter(c => c.Segmento === "interior"), [clientes]);
+  const isInterior = (c: Cliente) => c.Segmento === "interior" || c.Vendedor.toLowerCase().includes("interior");
+  const clientesCapital = useMemo(() => clientes.filter(c => !isInterior(c)), [clientes]);
+  const clientesInterior = useMemo(() => clientes.filter(c => isInterior(c)), [clientes]);
 
   const filtered = useMemo(() => {
     let list = clientesCapital;
