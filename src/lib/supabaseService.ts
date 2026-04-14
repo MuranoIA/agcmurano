@@ -2,6 +2,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
 
+// ---- VENDEDOR NAME NORMALIZATION ----
+
+const VENDEDOR_NORMALIZE: Record<string, string> = {
+  "jaques": "Jacques",
+  "jacques": "Jacques",
+  "hugo": "Hugo",
+  "maiara": "Maiara",
+  "jacques interior": "Jacques Interior",
+  "jaques interior": "Jacques Interior",
+  "hugo interior": "Hugo Interior",
+  "maiara interior": "Maiara Interior",
+};
+
+function normalizeVendedor(v: string | null | undefined): string {
+  if (!v) return "";
+  const key = v.trim().toLowerCase();
+  return VENDEDOR_NORMALIZE[key] || v;
+}
+
 // ---- CLIENTES ----
 
 export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
