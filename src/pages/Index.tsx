@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { parseMesCol } from "@/lib/parseMesCol";
 
 const Dashboard: React.FC = () => {
