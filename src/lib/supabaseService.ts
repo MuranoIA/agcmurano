@@ -39,7 +39,7 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
   let from = 0;
   const pageSize = 1000;
   while (true) {
-    const { data, error } = await supabase
+    const { data, error } = await externalSupabase
       .from("pedidos")
       .select("*")
       .range(from, from + pageSize - 1);
