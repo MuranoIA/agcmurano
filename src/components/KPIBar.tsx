@@ -88,7 +88,7 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
     { label: "Ativos", value: String(ativos), cls: "badge-active" },
     { label: "Risco", value: String(risco), cls: "badge-risk" },
     { label: "Inativos", value: String(inativos), cls: "badge-inactive" },
-    { label: "Esta semana", value: String(estaSemana), cls: "text-primary font-bold" },
+    
   ];
 
   // Clientes positivados acima/abaixo do TM
@@ -154,7 +154,7 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
 
   return (
     <div className="space-y-3 mb-4">
-      {renderRow(row1, "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7")}
+      {renderRow(row1, "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6")}
       {renderRow(row2, "grid-cols-3 sm:grid-cols-5 lg:grid-cols-9")}
     </div>
   );
