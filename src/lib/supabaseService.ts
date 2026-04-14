@@ -5,9 +5,20 @@ import { Json } from "@/integrations/supabase/types";
 // ---- CLIENTES ----
 
 export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
-  const { data, error } = await supabase.from("clientes").select("*");
-  if (error) throw error;
-  if (!data || data.length === 0) return { clientes: [], mesesCols: [] };
+  // Paginate to get ALL clients (Supabase default limit is 1000)
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase.from("clientes").select("*").range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  if (allData.length === 0) return { clientes: [], mesesCols: [] };
+  const data = allData;
 
   // Detect month columns from the first record's meses JSONB
   const sampleMeses = (data[0].meses as Record<string, number>) || {};
@@ -38,6 +49,7 @@ export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols:
     Fat_Total: r.fat_total || 0,
     Primeira_Compra: r.primeira_compra || "",
     Ultima_Compra: r.ultima_compra || "",
+    Segmento: r.segmento || "capital",
     meses: (r.meses as Record<string, number>) || {},
   }));
 
@@ -98,10 +110,20 @@ export async function dbSetVendedor(codigo: string, vendedor: string) {
 // ---- OVERLAY: VALORES MES ----
 
 export async function fetchOverlayValoresMes(): Promise<Record<string, Record<string, number>>> {
-  const { data, error } = await supabase.from("overlay_valores_mes").select("*");
-  if (error) throw error;
+  // Paginate to get ALL overlay values (Supabase default limit is 1000)
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase.from("overlay_valores_mes").select("*").range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
   const map: Record<string, Record<string, number>> = {};
-  data?.forEach(r => {
+  allData.forEach(r => {
     if (!map[r.codigo]) map[r.codigo] = {};
     map[r.codigo][r.mes] = r.valor;
   });
@@ -114,6 +136,20 @@ export async function dbSetValorMes(codigo: string, mes: string, valor: number) 
     { onConflict: "codigo,mes" }
   );
   if (error) throw error;
+}
+
+export async function dbBulkSetValoresMes(rows: { codigo: string; mes: string; valor: number }[]) {
+  // Upsert in batches of 200
+  for (let i = 0; i < rows.length; i += 200) {
+    const batch = rows.slice(i, i + 200);
+    const { error } = await supabase.from("overlay_valores_mes").upsert(
+      batch,
+      { onConflict: "codigo,mes" }
+    );
+    if (error) {
+      console.error("Erro bulk upsert overlay_valores_mes batch", i, error);
+    }
+  }
 }
 
 // ---- OVERLAY: VISITAS ----
@@ -149,6 +185,23 @@ export async function dbAddVisita(v: Visita) {
 export async function dbRemoveVisita(id: string) {
   const { error } = await supabase.from("overlay_visitas").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ---- BULK UPDATE CLIENTES (recalculated fields) ----
+
+export async function bulkUpdateClienteFields(clientes: { codigo: string; tm_mes: number; ciclo_medio_d: number; dias_sem_compra: number; status: string; dias_para_acao: number; proxima_acao: string; objetivo_rs: number }[]) {
+  for (const c of clientes) {
+    const { error } = await supabase.from("clientes").update({
+      tm_mes: c.tm_mes,
+      ciclo_medio_d: c.ciclo_medio_d,
+      dias_sem_compra: c.dias_sem_compra,
+      status: c.status,
+      dias_para_acao: c.dias_para_acao,
+      proxima_acao: c.proxima_acao,
+      objetivo_rs: c.objetivo_rs,
+    }).eq("codigo", c.codigo);
+    if (error) console.error("Erro update cliente", c.codigo, error);
+  }
 }
 
 // ---- FULL OVERLAY ----
