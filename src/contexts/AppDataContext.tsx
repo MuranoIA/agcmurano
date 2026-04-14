@@ -37,11 +37,11 @@ interface AppState {
 const Ctx = createContext<AppState>(null!);
 export const useAppData = () => useContext(Ctx);
 
-function applyOverlay(raw: Cliente[], overlay: OverlayStore): Cliente[] {
+function applyOverlay(raw: Cliente[], overlay: OverlayStore, skipValoresMes = false): Cliente[] {
   return raw.map(c => {
     const vendedor = overlay.vendedores[c.Codigo] || c.Vendedor;
     const meses = { ...c.meses };
-    if (overlay.valores_mes[c.Codigo]) {
+    if (!skipValoresMes && overlay.valores_mes[c.Codigo]) {
       Object.entries(overlay.valores_mes[c.Codigo]).forEach(([m, v]) => { meses[m] = v; });
     }
     return { ...c, Vendedor: vendedor, meses };
@@ -53,6 +53,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
+  const [dataFromPedidos, setDataFromPedidos] = useState(false);
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +69,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setRawClientes(pedidosResult.clientes);
         if (pedidosResult.mesesCols.length > 0) setMesesCols(pedidosResult.mesesCols);
         setCsvLoaded(true);
+        setDataFromPedidos(true);
       } else {
         // Fallback to clientes table if pedidos is empty
         const clientesResult = await fetchClientes();
@@ -178,7 +180,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [csvLoaded, rawClientes, refreshData]);
 
   const clientes = useMemo(() => {
-    let list = applyOverlay(rawClientes, overlay);
+    let list = applyOverlay(rawClientes, overlay, dataFromPedidos);
     // Recalculate derived fields locally
     list = recalcAllClientes(list);
     // Filter out clients without vendedor
@@ -187,7 +189,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       list = list.filter(c => c.Vendedor === vendorName);
     }
     return list;
-  }, [rawClientes, overlay, role, vendorName]);
+  }, [rawClientes, overlay, role, vendorName, dataFromPedidos]);
 
   return (
     <Ctx.Provider value={{
