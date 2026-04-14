@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { externalSupabase } from "@/integrations/supabase/externalClient";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
 import { Pedido, processPedidos } from "./csvParser";
@@ -38,7 +39,7 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
   let from = 0;
   const pageSize = 1000;
   while (true) {
-    const { data, error } = await supabase
+    const { data, error } = await externalSupabase
       .from("pedidos")
       .select("*")
       .range(from, from + pageSize - 1);
