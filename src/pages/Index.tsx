@@ -186,9 +186,14 @@ const Dashboard: React.FC = () => {
                   </div>
                 ))}
               </div>
-              {/* Filtros Interior */}
-              <Filters vendedor={intVendedor} setVendedor={setIntVendedor} status={intStatus} setStatus={setIntStatus} busca={intBusca} setBusca={setIntBusca} />
-              {/* Tabela Interior */}
+              <div className="max-w-xs">
+                <Input
+                  placeholder="Buscar por nome ou código..."
+                  value={intBusca}
+                  onChange={e => setIntBusca(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
               <ClienteTable clientes={filteredInterior} onSelect={setSelectedCliente} />
             </div>
           </TabsContent>
