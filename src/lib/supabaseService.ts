@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
+import { Pedido, processPedidos } from "./csvParser";
 
 // ---- VENDEDOR NAME NORMALIZATION ----
 
