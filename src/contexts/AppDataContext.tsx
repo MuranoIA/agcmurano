@@ -189,7 +189,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       list = list.filter(c => c.Vendedor === vendorName);
     }
     return list;
-  }, [rawClientes, overlay, role, vendorName]);
+  }, [rawClientes, overlay, role, vendorName, dataFromPedidos]);
 
   return (
     <Ctx.Provider value={{
