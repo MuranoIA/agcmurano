@@ -79,26 +79,42 @@ export async function upsertClientes(clientes: Cliente[]): Promise<void> {
   // Delete all existing then insert (simple full-replace on CSV upload)
   await supabase.from("clientes").delete().neq("codigo", "___impossible___");
 
-  const rows = clientes.map(c => ({
-    codigo: c.Codigo,
-    nome: c.Nome,
-    vendedor: c.Vendedor || null,
-    objetivo_rs: c.Objetivo_R$ || null,
-    tm_mes: c.TM_Mes || null,
-    tm_pedido: c.TM_Pedido || null,
-    ciclo_medio_d: c.Ciclo_Medio_d || null,
-    mcc: c.MCC || null,
-    meses_1a_compra: c.Meses_1a_Compra || null,
-    dias_sem_compra: c.Dias_Sem_Compra || null,
-    status: c.Status || null,
-    dias_para_acao: c.Dias_Para_Acao || null,
-    proxima_acao: c.Proxima_Acao || null,
-    n_pedidos: c.N_Pedidos || null,
-    fat_total: c.Fat_Total || null,
-    primeira_compra: c.Primeira_Compra || null,
-    ultima_compra: c.Ultima_Compra || null,
-    meses: c.meses as unknown as Json,
-  }));
+  // Fetch existing Objetivo values before deleting (marca d'água)
+  const { data: existingClientes } = await supabase
+    .from("clientes")
+    .select("codigo, objetivo_rs");
+  const existingObjetivos: Record<string, number> = {};
+  existingClientes?.forEach(c => {
+    if (c.objetivo_rs) existingObjetivos[c.codigo] = c.objetivo_rs;
+  });
+
+  const rows = clientes.map(c => {
+    // Apply marca d'água: keep higher Objetivo
+    const prevObjetivo = existingObjetivos[c.Codigo] || 0;
+    const objetivo = Math.max(c.Objetivo_R$ || 0, prevObjetivo);
+
+    return {
+      codigo: c.Codigo,
+      nome: c.Nome,
+      vendedor: c.Vendedor || null,
+      objetivo_rs: objetivo || null,
+      tm_mes: c.TM_Mes || null,
+      tm_pedido: c.TM_Pedido || null,
+      ciclo_medio_d: c.Ciclo_Medio_d || null,
+      mcc: c.MCC || null,
+      meses_1a_compra: c.Meses_1a_Compra || null,
+      dias_sem_compra: c.Dias_Sem_Compra || null,
+      status: c.Status || null,
+      dias_para_acao: c.Dias_Para_Acao || null,
+      proxima_acao: c.Proxima_Acao || null,
+      n_pedidos: c.N_Pedidos || null,
+      fat_total: c.Fat_Total || null,
+      primeira_compra: c.Primeira_Compra || null,
+      ultima_compra: c.Ultima_Compra || null,
+      segmento: c.Segmento || "capital",
+      meses: c.meses as unknown as Json,
+    };
+  });
 
   // Insert in batches of 100
   for (let i = 0; i < rows.length; i += 100) {
