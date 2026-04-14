@@ -29,7 +29,6 @@ const Dashboard: React.FC = () => {
   const mesesCols = appData?.mesesCols ?? [];
   const csvLoaded = appData?.csvLoaded ?? false;
   const loading = appData?.loading ?? true;
-  const { role } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
