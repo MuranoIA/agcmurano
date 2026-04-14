@@ -59,14 +59,22 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const refreshData = useCallback(async () => {
     try {
-      const [clientesResult, overlayResult, visitasResult] = await Promise.all([
-        fetchClientes(),
+      const [pedidosResult, overlayResult, visitasResult] = await Promise.all([
+        fetchPedidosFromDB(),
         fetchFullOverlay(),
         fetchOverlayVisitas(),
       ]);
-      setRawClientes(clientesResult.clientes);
-      if (clientesResult.mesesCols.length > 0) setMesesCols(clientesResult.mesesCols);
-      setCsvLoaded(clientesResult.clientes.length > 0);
+      if (pedidosResult.clientes.length > 0) {
+        setRawClientes(pedidosResult.clientes);
+        if (pedidosResult.mesesCols.length > 0) setMesesCols(pedidosResult.mesesCols);
+        setCsvLoaded(true);
+      } else {
+        // Fallback to clientes table if pedidos is empty
+        const clientesResult = await fetchClientes();
+        setRawClientes(clientesResult.clientes);
+        if (clientesResult.mesesCols.length > 0) setMesesCols(clientesResult.mesesCols);
+        setCsvLoaded(clientesResult.clientes.length > 0);
+      }
       setOverlay(overlayResult);
       setVisitas(visitasResult);
     } catch (err) {
