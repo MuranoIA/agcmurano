@@ -35,17 +35,23 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
     return clientes.filter(c => mesesCols.some(m => (c.meses[m] || 0) > 0)).length;
   }, [clientes, mesesCols]);
 
-  // TM/Mês Positivados: Fat período ÷ quantidade de positivados
+  // Quantidade de meses no período selecionado
+  const qtdMeses = useMemo(() => {
+    if (!mesesCols || mesesCols.length === 0) return 1;
+    return mesesCols.length;
+  }, [mesesCols]);
+
+  // TM/Mês Positivados: Fat período ÷ meses ÷ quantidade de positivados
   const tmPosAvg = useMemo(() => {
-    return positivados > 0 ? fatPeriodo / positivados : 0;
-  }, [fatPeriodo, positivados]);
+    return positivados > 0 ? fatPeriodo / qtdMeses / positivados : 0;
+  }, [fatPeriodo, positivados, qtdMeses]);
 
   // TM_Mes médio original (para % realizado)
   const tmMesOrigAvg = useMemo(() => {
     return total > 0 ? clientes.reduce((s, c) => s + c.TM_Mes, 0) / total : 0;
   }, [clientes, total]);
 
-  // % Realizado vs TM Geral
+  // % Realizado vs TM Geral (fat período ÷ meses ÷ clientes vs TM médio)
   const pctRealizadoTMGeral = useMemo(() => {
     return tmMesOrigAvg > 0 ? (tmMesAvg / tmMesOrigAvg) * 100 : 0;
   }, [tmMesAvg, tmMesOrigAvg]);
@@ -55,16 +61,18 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
     return tmMesOrigAvg > 0 ? (tmPosAvg / tmMesOrigAvg) * 100 : 0;
   }, [tmPosAvg, tmMesOrigAvg]);
 
-  // % Realizado vs Objetivo: média do (Abr/26 ÷ Objetivo_R$) × 100
+  // % Realizado vs Objetivo: fat período ÷ (Objetivo × meses)
   const pctRealizadoObj = useMemo(() => {
     const comObj = clientes.filter(c => c.Objetivo_R$ > 0);
     if (comObj.length === 0) return 0;
     const soma = comObj.reduce((s, c) => {
-      const abr = c.meses["Abr/26"] || 0;
-      return s + (abr / c.Objetivo_R$);
+      const fatCliente = mesesCols && mesesCols.length > 0
+        ? mesesCols.reduce((ms, m) => ms + (c.meses[m] || 0), 0)
+        : c.Fat_Total;
+      return s + (fatCliente / (c.Objetivo_R$ * qtdMeses));
     }, 0);
     return (soma / comObj.length) * 100;
-  }, [clientes]);
+  }, [clientes, mesesCols, qtdMeses]);
 
   const ativos = clientes.filter(c => c.Status === "Ativo").length;
   const risco = clientes.filter(c => c.Status === "Risco").length;
