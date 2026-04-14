@@ -53,20 +53,16 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientesCapital, vendedor, status, busca]);
 
-  const [intVendedor, setIntVendedor] = useState("Todos");
-  const [intStatus, setIntStatus] = useState("Todos");
   const [intBusca, setIntBusca] = useState("");
 
   const filteredInterior = useMemo(() => {
     let list = clientesInterior;
-    if (intVendedor !== "Todos") list = list.filter(c => c.Vendedor === intVendedor);
-    if (intStatus !== "Todos") list = list.filter(c => c.Status === intStatus);
     if (intBusca) {
       const term = intBusca.toLowerCase();
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientesInterior, intVendedor, intStatus, intBusca]);
+  }, [clientesInterior, intBusca]);
 
   const filteredMesesCols = useMemo(() => {
     if (!periodFrom && !periodTo) return mesesCols;
