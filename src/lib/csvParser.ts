@@ -24,7 +24,7 @@ function daysBetween(a: Date, b: Date): number {
   return Math.abs(Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
-interface Pedido {
+export interface Pedido {
   pedido: string;
   codCliente: string;
   nome: string;
@@ -83,6 +83,10 @@ export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string
     });
   }
 
+  return processPedidos(pedidos);
+}
+
+export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesCols: string[] } {
   // Group by client
   const groups: Record<string, Pedido[]> = {};
   for (const p of pedidos) {
@@ -92,9 +96,6 @@ export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string
 
   const today = new Date();
   const allMesesSet = new Set<string>();
-
-  // Calculate Objetivo from previously stored values (persisted in DB)
-  // On fresh CSV parse, we just calculate TM * 1.10
 
   const clientes: Cliente[] = Object.entries(groups).map(([codigo, peds]) => {
     const nome = peds[0].nome;
