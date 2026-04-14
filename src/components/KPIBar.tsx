@@ -10,18 +10,24 @@ interface KPIBarProps {
 const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
   const total = clientes.length;
 
+  // Fat_Total is ALWAYS the full total, never filtered by period
   const fatTotal = useMemo(() => {
-    if (!mesesCols || mesesCols.length === 0) return clientes.reduce((s, c) => s + c.Fat_Total, 0);
+    return clientes.reduce((s, c) => s + c.Fat_Total, 0);
+  }, [clientes]);
+
+  // Period-filtered total for comparative metrics only
+  const fatPeriodo = useMemo(() => {
+    if (!mesesCols || mesesCols.length === 0) return fatTotal;
     return clientes.reduce((s, c) => {
       return s + mesesCols.reduce((ms, m) => ms + (c.meses[m] || 0), 0);
     }, 0);
-  }, [clientes, mesesCols]);
+  }, [clientes, mesesCols, fatTotal]);
 
   const tmMesAvg = useMemo(() => {
     if (!mesesCols || mesesCols.length === 0 || total === 0)
       return total ? clientes.reduce((s, c) => s + c.TM_Mes, 0) / total : 0;
-    return total ? fatTotal / mesesCols.length / total : 0;
-  }, [clientes, mesesCols, fatTotal, total]);
+    return total ? fatPeriodo / mesesCols.length / total : 0;
+  }, [clientes, mesesCols, fatPeriodo, total]);
 
   // Positivados: clientes com valor > 0 em algum mês do período
   const positivados = useMemo(() => {
@@ -29,10 +35,10 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
     return clientes.filter(c => mesesCols.some(m => (c.meses[m] || 0) > 0)).length;
   }, [clientes, mesesCols]);
 
-  // TM/Mês Positivados: Fat.Total ÷ quantidade de positivados
+  // TM/Mês Positivados: Fat período ÷ quantidade de positivados
   const tmPosAvg = useMemo(() => {
-    return positivados > 0 ? fatTotal / positivados : 0;
-  }, [fatTotal, positivados]);
+    return positivados > 0 ? fatPeriodo / positivados : 0;
+  }, [fatPeriodo, positivados]);
 
   // TM_Mes médio original (para % realizado)
   const tmMesOrigAvg = useMemo(() => {

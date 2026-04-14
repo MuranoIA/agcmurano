@@ -39,10 +39,14 @@ export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols:
   if (allData.length === 0) return { clientes: [], mesesCols: [] };
   const data = allData;
 
-  // Detect month columns from the first record's meses JSONB
-  const sampleMeses = (data[0].meses as Record<string, number>) || {};
+  // Detect month columns from ALL records' meses JSONB
   const mesRegex = /^[A-Za-z]{3}\/\d{2}$/;
-  const mesesCols = Object.keys(sampleMeses).filter(k => mesRegex.test(k)).sort((a, b) => {
+  const allMesesSet = new Set<string>();
+  for (const row of data) {
+    const meses = (row.meses as Record<string, number>) || {};
+    Object.keys(meses).filter(k => mesRegex.test(k)).forEach(k => allMesesSet.add(k));
+  }
+  const mesesCols = [...allMesesSet].sort((a, b) => {
     const [ma, ya] = a.split("/");
     const [mb, yb] = b.split("/");
     if (ya !== yb) return ya.localeCompare(yb);
