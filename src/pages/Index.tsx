@@ -34,6 +34,7 @@ const Dashboard: React.FC = () => {
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showNovoCliente, setShowNovoCliente] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(role === "admin" ? "visao" : "clientes");
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -42,6 +43,11 @@ const Dashboard: React.FC = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 1, 0);
   });
+
+  // Interior filters
+  const [intVendedor, setIntVendedor] = useState("Todos");
+  const [intStatus, setIntStatus] = useState("Todos");
+  const [intBusca, setIntBusca] = useState("");
 
   const isInterior = (c: Cliente) => c.Segmento === "interior" || c.Vendedor.toLowerCase().includes("interior");
   const clientesCapital = useMemo(() => clientes.filter(c => !isInterior(c)), [clientes]);
@@ -58,16 +64,16 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientesCapital, vendedor, status, busca]);
 
-  const [intBusca, setIntBusca] = useState("");
-
   const filteredInterior = useMemo(() => {
     let list = clientesInterior;
+    if (intVendedor !== "Todos") list = list.filter(c => c.Vendedor === intVendedor);
+    if (intStatus !== "Todos") list = list.filter(c => c.Status === intStatus);
     if (intBusca) {
       const term = intBusca.toLowerCase();
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientesInterior, intBusca]);
+  }, [clientesInterior, intVendedor, intStatus, intBusca]);
 
   const filteredMesesCols = useMemo(() => {
     if (!periodFrom && !periodTo) return mesesCols;
