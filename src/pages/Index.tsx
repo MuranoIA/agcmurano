@@ -23,7 +23,9 @@ import { Input } from "@/components/ui/input";
 import { parseMesCol } from "@/lib/parseMesCol";
 
 const Dashboard: React.FC = () => {
-  const { clientes, mesesCols, csvLoaded, loading } = useAppData();
+  const appData = useAppData();
+  if (!appData) return null;
+  const { clientes, mesesCols, csvLoaded, loading } = appData;
   const { role } = useAuth();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
