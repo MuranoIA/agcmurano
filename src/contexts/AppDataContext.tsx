@@ -13,6 +13,7 @@ import {
   dbRemoveVisita,
   subscribeToOverlayChanges,
   bulkUpdateClienteFields,
+  fetchPedidosFromDB,
 } from "@/lib/supabaseService";
 import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
