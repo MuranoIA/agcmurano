@@ -170,6 +170,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pedidos: {
+        Row: {
+          cod_cliente: number
+          created_at: string | null
+          data: string
+          id: number
+          nome: string
+          pedido: number
+          tipo: string
+          valor: number
+          vendedor: string
+        }
+        Insert: {
+          cod_cliente: number
+          created_at?: string | null
+          data: string
+          id?: number
+          nome: string
+          pedido: number
+          tipo: string
+          valor?: number
+          vendedor: string
+        }
+        Update: {
+          cod_cliente?: number
+          created_at?: string | null
+          data?: string
+          id?: number
+          nome?: string
+          pedido?: number
+          tipo?: string
+          valor?: number
+          vendedor?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

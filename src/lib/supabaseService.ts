@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
+import { Pedido, processPedidos } from "./csvParser";
 
 // ---- VENDEDOR NAME NORMALIZATION ----
 
@@ -19,6 +20,47 @@ function normalizeVendedor(v: string | null | undefined): string {
   if (!v) return "";
   const key = v.trim().toLowerCase();
   return VENDEDOR_NORMALIZE[key] || v;
+}
+
+// ---- PEDIDOS (from Supabase) ----
+
+function normalizeVendedorCSV(v: string): string {
+  const map: Record<string, string> = {
+    "jaques": "Jacques", "jacques": "Jacques", "hugo": "Hugo", "maiara": "Maiara",
+    "jacques interior": "Jacques Interior", "jaques interior": "Jacques Interior",
+    "hugo interior": "Hugo Interior", "maiara interior": "Maiara Interior",
+  };
+  return map[v.trim().toLowerCase()] || v;
+}
+
+export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from("pedidos")
+      .select("*")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  if (allData.length === 0) return { clientes: [], mesesCols: [] };
+
+  const pedidos: Pedido[] = allData.map(r => ({
+    pedido: String(r.pedido),
+    codCliente: String(r.cod_cliente),
+    nome: r.nome,
+    vendedor: normalizeVendedorCSV(r.vendedor),
+    valor: Number(r.valor) || 0,
+    data: new Date(r.data),
+    tipo: r.tipo as "VENDA" | "DEV",
+  }));
+
+  return processPedidos(pedidos);
 }
 
 // ---- CLIENTES ----
