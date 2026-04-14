@@ -53,7 +53,7 @@ export async function fetchClientes(): Promise<{ clientes: Cliente[]; mesesCols:
   const clientes: Cliente[] = data.map(r => ({
     Codigo: r.codigo,
     Nome: r.nome,
-    Vendedor: r.vendedor || "",
+    Vendedor: normalizeVendedor(r.vendedor),
     Objetivo_R$: r.objetivo_rs || 0,
     TM_Mes: r.tm_mes || 0,
     TM_Pedido: r.tm_pedido || 0,
