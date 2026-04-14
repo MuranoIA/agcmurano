@@ -88,7 +88,7 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
     { label: "Ativos", value: String(ativos), cls: "badge-active" },
     { label: "Risco", value: String(risco), cls: "badge-risk" },
     { label: "Inativos", value: String(inativos), cls: "badge-inactive" },
-    { label: "Esta semana", value: String(estaSemana), cls: "text-primary font-bold" },
+    
   ];
 
   // Clientes positivados acima/abaixo do TM
