@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { externalSupabase } from "@/integrations/supabase/externalClient";
 import { Cliente, Visita, OverlayStore } from "./types";
 import { Json } from "@/integrations/supabase/types";
 import { Pedido, processPedidos } from "./csvParser";
