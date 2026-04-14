@@ -34,6 +34,7 @@ const Dashboard: React.FC = () => {
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showNovoCliente, setShowNovoCliente] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(role === "admin" ? "visao" : "clientes");
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -42,6 +43,11 @@ const Dashboard: React.FC = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 1, 0);
   });
+
+  // Interior filters
+  const [intVendedor, setIntVendedor] = useState("Todos");
+  const [intStatus, setIntStatus] = useState("Todos");
+  const [intBusca, setIntBusca] = useState("");
 
   const isInterior = (c: Cliente) => c.Segmento === "interior" || c.Vendedor.toLowerCase().includes("interior");
   const clientesCapital = useMemo(() => clientes.filter(c => !isInterior(c)), [clientes]);
@@ -58,16 +64,16 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientesCapital, vendedor, status, busca]);
 
-  const [intBusca, setIntBusca] = useState("");
-
   const filteredInterior = useMemo(() => {
     let list = clientesInterior;
+    if (intVendedor !== "Todos") list = list.filter(c => c.Vendedor === intVendedor);
+    if (intStatus !== "Todos") list = list.filter(c => c.Status === intStatus);
     if (intBusca) {
       const term = intBusca.toLowerCase();
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientesInterior, intBusca]);
+  }, [clientesInterior, intVendedor, intStatus, intBusca]);
 
   const filteredMesesCols = useMemo(() => {
     if (!periodFrom && !periodTo) return mesesCols;
@@ -126,11 +132,15 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} />
       <div className="container px-4 py-4">
-        <KPIBar clientes={filtered} mesesCols={filteredMesesCols} />
-        <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
-        <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={handleResetPeriod} />
+        {activeTab !== "interior" && (
+          <>
+            <KPIBar clientes={filtered} mesesCols={filteredMesesCols} />
+            <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
+            <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={handleResetPeriod} />
+          </>
+        )}
 
-        <Tabs defaultValue={role === "admin" ? "visao" : "clientes"} className="mt-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
           <div className="flex items-center justify-between mb-3">
             <TabsList>
               {role === "admin" && <TabsTrigger value="visao">Visão Geral</TabsTrigger>}
@@ -189,6 +199,21 @@ const Dashboard: React.FC = () => {
                     <div className="text-xs text-muted-foreground mb-1">{c.label}</div>
                     <div className={`text-lg font-semibold ${c.cls}`}>{c.value}</div>
                   </div>
+                ))}
+              </div>
+              {/* Filters Interior */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
+                {["Todos", "Jacques Interior", "Maiara Interior", "Hugo Interior"].map(v => (
+                  <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
+                    {v}
+                  </Button>
+                ))}
+                <span className="text-xs text-muted-foreground font-medium ml-4">Status:</span>
+                {["Todos", "Ativo", "Risco", "Inativo"].map(s => (
+                  <Button key={s} size="sm" variant={intStatus === s ? "default" : "outline"} onClick={() => setIntStatus(s)} className="text-xs h-7">
+                    {s}
+                  </Button>
                 ))}
               </div>
               <div className="max-w-xs">

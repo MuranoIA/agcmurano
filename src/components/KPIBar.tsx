@@ -69,7 +69,7 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesCols }) => {
   const ativos = clientes.filter(c => c.Status === "Ativo").length;
   const risco = clientes.filter(c => c.Status === "Risco").length;
   const inativos = clientes.filter(c => c.Status === "Inativo").length;
-  const estaSemana = clientes.filter(c => c.Dias_Para_Acao >= 0 && c.Dias_Para_Acao <= 7).length;
+  const estaSemana = clientes.filter(c => c.Status === "Ativo" && c.Dias_Para_Acao >= 0 && c.Dias_Para_Acao <= 7).length;
 
   const fmtPct = (v: number) => `${v.toFixed(1)}%`;
 
