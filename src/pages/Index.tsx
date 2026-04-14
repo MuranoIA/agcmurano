@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { parseMesCol } from "@/lib/parseMesCol";
 
 const Dashboard: React.FC = () => {
@@ -53,20 +54,16 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientesCapital, vendedor, status, busca]);
 
-  const [intVendedor, setIntVendedor] = useState("Todos");
-  const [intStatus, setIntStatus] = useState("Todos");
   const [intBusca, setIntBusca] = useState("");
 
   const filteredInterior = useMemo(() => {
     let list = clientesInterior;
-    if (intVendedor !== "Todos") list = list.filter(c => c.Vendedor === intVendedor);
-    if (intStatus !== "Todos") list = list.filter(c => c.Status === intStatus);
     if (intBusca) {
       const term = intBusca.toLowerCase();
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientesInterior, intVendedor, intStatus, intBusca]);
+  }, [clientesInterior, intBusca]);
 
   const filteredMesesCols = useMemo(() => {
     if (!periodFrom && !periodTo) return mesesCols;
@@ -190,9 +187,14 @@ const Dashboard: React.FC = () => {
                   </div>
                 ))}
               </div>
-              {/* Filtros Interior */}
-              <Filters vendedor={intVendedor} setVendedor={setIntVendedor} status={intStatus} setStatus={setIntStatus} busca={intBusca} setBusca={setIntBusca} />
-              {/* Tabela Interior */}
+              <div className="max-w-xs">
+                <Input
+                  placeholder="Buscar por nome ou código..."
+                  value={intBusca}
+                  onChange={e => setIntBusca(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
               <ClienteTable clientes={filteredInterior} onSelect={setSelectedCliente} />
             </div>
           </TabsContent>
