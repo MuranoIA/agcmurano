@@ -34,7 +34,7 @@ function normalizeVendedorCSV(v: string): string {
   return map[v.trim().toLowerCase()] || v;
 }
 
-export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
+export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
   let allData: any[] = [];
   let from = 0;
   const pageSize = 1000;
@@ -42,7 +42,7 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
     const { data, error } = await externalSupabase
       .from("pedidos")
       .select("*")
-      .eq("empresa", "Grandes Contas")
+      .eq("empresa", empresa)
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
