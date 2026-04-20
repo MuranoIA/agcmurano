@@ -1,5 +1,5 @@
 import React from "react";
-import { VENDEDORES } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -13,7 +13,8 @@ interface Props {
 }
 
 const Filters: React.FC<Props> = ({ vendedor, setVendedor, status, setStatus, busca, setBusca }) => {
-  const vendedorOpts = ["Todos", ...VENDEDORES];
+  const { vendedores } = useEmpresa();
+  const vendedorOpts = ["Todos", ...vendedores];
   const statusOpts = ["Todos", "Ativo", "Risco", "Inativo"];
 
   return (

@@ -1,5 +1,6 @@
 import React from "react";
-import { Cliente, VENDEDORES } from "@/lib/types";
+import { Cliente } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 import { AlertTriangle, Users, XCircle } from "lucide-react";

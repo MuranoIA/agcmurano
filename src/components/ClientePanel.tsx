@@ -1,7 +1,7 @@
 import React from "react";
 import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
-import { VENDEDORES } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import { heatmapColor } from "@/lib/heatmapColors";
 import StatusBadge from "./StatusBadge";

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Cliente, VENDEDORES } from "@/lib/types";
+import { Cliente } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

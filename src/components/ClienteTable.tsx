@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
-import { VENDEDORES } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
 import { ArrowUpDown } from "lucide-react";
 

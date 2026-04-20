@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
-import { VENDEDORES, Visita } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import { Visita } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
