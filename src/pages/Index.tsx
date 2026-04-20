@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 import AppHeader from "@/components/AppHeader";
@@ -25,6 +26,7 @@ import { parseMesCol } from "@/lib/parseMesCol";
 const Dashboard: React.FC = () => {
   const appData = useAppData();
   const { role } = useAuth();
+  const { hasInterior, vendedoresInterior } = useEmpresa();
   const clientes = appData?.clientes ?? [];
   const mesesCols = appData?.mesesCols ?? [];
   const csvLoaded = appData?.csvLoaded ?? false;
@@ -149,7 +151,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
-              <TabsTrigger value="interior">Interior</TabsTrigger>
+              {hasInterior && <TabsTrigger value="interior">Interior</TabsTrigger>}
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
               <Download size={14} className="mr-1" /> Exportar CSV
@@ -204,7 +206,7 @@ const Dashboard: React.FC = () => {
               {/* Filters Interior */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
-                {["Todos", "Jacques Interior", "Maiara Interior", "Hugo Interior"].map(v => (
+                {["Todos", ...vendedoresInterior].map(v => (
                   <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
                     {v}
                   </Button>
@@ -243,9 +245,11 @@ const Dashboard: React.FC = () => {
 };
 
 const Index = () => (
-  <AppDataProvider>
-    <Dashboard />
-  </AppDataProvider>
+  <EmpresaProvider>
+    <AppDataProvider>
+      <Dashboard />
+    </AppDataProvider>
+  </EmpresaProvider>
 );
 
 export default Index;
