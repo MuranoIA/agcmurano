@@ -18,6 +18,7 @@ import {
 import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 
 interface AppState {
   clientes: Cliente[];
@@ -50,6 +51,7 @@ function applyOverlay(raw: Cliente[], overlay: OverlayStore, skipValoresMes = fa
 
 export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, vendorName } = useAuth();
+  const { empresa } = useEmpresa();
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
@@ -61,7 +63,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const refreshData = useCallback(async () => {
     try {
       const [pedidosResult, overlayResult, visitasResult] = await Promise.all([
-        fetchPedidosFromDB(),
+        fetchPedidosFromDB(empresa),
         fetchFullOverlay(),
         fetchOverlayVisitas(),
       ]);
@@ -70,12 +72,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (pedidosResult.mesesCols.length > 0) setMesesCols(pedidosResult.mesesCols);
         setCsvLoaded(true);
         setDataFromPedidos(true);
-      } else {
-        // Fallback to clientes table if pedidos is empty
+      } else if (empresa === "Grandes Contas") {
+        // Fallback to clientes table only for Grandes Contas
         const clientesResult = await fetchClientes();
         setRawClientes(clientesResult.clientes);
         if (clientesResult.mesesCols.length > 0) setMesesCols(clientesResult.mesesCols);
         setCsvLoaded(clientesResult.clientes.length > 0);
+      } else {
+        setRawClientes([]);
+        setMesesCols([]);
+        setCsvLoaded(false);
       }
       setOverlay(overlayResult);
       setVisitas(visitasResult);
@@ -84,10 +90,11 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [empresa]);
 
-  // Initial load + realtime subscription
+  // Initial load + reload on empresa change + realtime subscription
   useEffect(() => {
+    setLoading(true);
     refreshData();
     const unsub = subscribeToOverlayChanges(() => {
       refreshData();
