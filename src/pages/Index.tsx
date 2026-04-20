@@ -37,6 +37,16 @@ const Dashboard: React.FC = () => {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showNovoCliente, setShowNovoCliente] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(role === "admin" ? "visao" : "clientes");
+
+  // Reset filters/tab when empresa changes (avoid stuck state on hidden tab or invalid vendor)
+  useEffect(() => {
+    if (!hasInterior && activeTab === "interior") {
+      setActiveTab(role === "admin" ? "visao" : "clientes");
+    }
+    setVendedor("Todos");
+    setIntVendedor("Todos");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasInterior]);
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
