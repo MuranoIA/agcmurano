@@ -52,11 +52,14 @@ export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Pr
   }
   if (allData.length === 0) return { clientes: [], mesesCols: [] };
 
+  const titleCase = (s: string) => s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const pedidos: Pedido[] = allData.map(r => ({
     pedido: String(r.pedido),
     codCliente: String(r.cod_cliente),
     nome: r.nome,
-    vendedor: empresa === "Grandes Contas" ? normalizeVendedorCSV(r.vendedor) : (r.vendedor ? String(r.vendedor).trim() : ""),
+    vendedor: empresa === "Grandes Contas"
+      ? normalizeVendedorCSV(r.vendedor)
+      : (r.vendedor ? titleCase(String(r.vendedor)) : ""),
     valor: Number(r.valor) || 0,
     data: parsePedidoDate(r.data),
     tipo: r.tipo as "VENDA" | "DEV",
