@@ -13,6 +13,7 @@ import { downloadFile, exportCSV } from "@/lib/format";
 
 const RegistroVisitas: React.FC = () => {
   const { clientes, visitas, addVisita, removeVisita } = useAppData();
+  const { vendedores } = useEmpresa();
 
   const [search, setSearch] = useState("");
   const [selectedCodigo, setSelectedCodigo] = useState("");
@@ -114,7 +115,7 @@ const RegistroVisitas: React.FC = () => {
             <Label>Vendedor</Label>
             <select className="w-full border rounded px-3 py-2 text-sm bg-card" value={vendedor} onChange={e => setVendedor(e.target.value)}>
               <option value="">Selecionar</option>
-              {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+              {vendedores.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
           <div>
@@ -151,7 +152,7 @@ const RegistroVisitas: React.FC = () => {
         <div className="flex flex-wrap gap-3 mb-4">
           <select className="border rounded px-2 py-1 text-sm bg-card" value={filtroVendedor} onChange={e => setFiltroVendedor(e.target.value)}>
             <option value="Todos">Todos vendedores</option>
-            {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+            {vendedores.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
           <Input type="date" className="w-40" placeholder="De" value={filtroDataIni} onChange={e => setFiltroDataIni(e.target.value)} />
           <Input type="date" className="w-40" placeholder="Até" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} />

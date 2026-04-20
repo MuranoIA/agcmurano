@@ -11,6 +11,7 @@ interface Props {
 }
 
 const RankingTable: React.FC<Props> = ({ clientes }) => {
+  const { vendedores: vendedoresList } = useEmpresa();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
 
@@ -40,7 +41,7 @@ const RankingTable: React.FC<Props> = ({ clientes }) => {
             <SelectTrigger className="w-40 h-8 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Todos">Todos</SelectItem>
-              {VENDEDORES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              {vendedoresList.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
