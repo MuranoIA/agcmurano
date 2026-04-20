@@ -42,6 +42,7 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
     const { data, error } = await externalSupabase
       .from("pedidos")
       .select("*")
+      .eq("empresa", "Grandes Contas")
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
