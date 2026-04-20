@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Cliente, VENDEDORES } from "@/lib/types";
+import { Cliente } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ interface Props {
 }
 
 const RankingTable: React.FC<Props> = ({ clientes }) => {
+  const { vendedores: vendedoresList } = useEmpresa();
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
 
@@ -39,7 +41,7 @@ const RankingTable: React.FC<Props> = ({ clientes }) => {
             <SelectTrigger className="w-40 h-8 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Todos">Todos</SelectItem>
-              {VENDEDORES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              {vendedoresList.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

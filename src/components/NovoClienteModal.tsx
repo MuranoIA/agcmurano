@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { VENDEDORES } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -18,6 +18,7 @@ interface Props {
 
 const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
   const { refreshData } = useAppData();
+  const { vendedores } = useEmpresa();
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
   const [vendedor, setVendedor] = useState("");
@@ -224,7 +225,7 @@ const NovoClienteModal: React.FC<Props> = ({ open, onOpenChange }) => {
             <Select value={vendedor} onValueChange={setVendedor}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                {VENDEDORES.map(v => (
+                {vendedores.map(v => (
                   <SelectItem key={v} value={v}>{v}</SelectItem>
                 ))}
               </SelectContent>

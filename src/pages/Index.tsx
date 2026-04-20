@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 import AppHeader from "@/components/AppHeader";
@@ -25,6 +26,7 @@ import { parseMesCol } from "@/lib/parseMesCol";
 const Dashboard: React.FC = () => {
   const appData = useAppData();
   const { role } = useAuth();
+  const { hasInterior, vendedoresInterior } = useEmpresa();
   const clientes = appData?.clientes ?? [];
   const mesesCols = appData?.mesesCols ?? [];
   const csvLoaded = appData?.csvLoaded ?? false;
@@ -35,6 +37,16 @@ const Dashboard: React.FC = () => {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showNovoCliente, setShowNovoCliente] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(role === "admin" ? "visao" : "clientes");
+
+  // Reset filters/tab when empresa changes (avoid stuck state on hidden tab or invalid vendor)
+  useEffect(() => {
+    if (!hasInterior && activeTab === "interior") {
+      setActiveTab(role === "admin" ? "visao" : "clientes");
+    }
+    setVendedor("Todos");
+    setIntVendedor("Todos");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasInterior]);
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -149,7 +161,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
-              <TabsTrigger value="interior">Interior</TabsTrigger>
+              {hasInterior && <TabsTrigger value="interior">Interior</TabsTrigger>}
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
               <Download size={14} className="mr-1" /> Exportar CSV
@@ -204,7 +216,7 @@ const Dashboard: React.FC = () => {
               {/* Filters Interior */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
-                {["Todos", "Jacques Interior", "Maiara Interior", "Hugo Interior"].map(v => (
+                {["Todos", ...vendedoresInterior].map(v => (
                   <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
                     {v}
                   </Button>
@@ -243,9 +255,11 @@ const Dashboard: React.FC = () => {
 };
 
 const Index = () => (
-  <AppDataProvider>
-    <Dashboard />
-  </AppDataProvider>
+  <EmpresaProvider>
+    <AppDataProvider>
+      <Dashboard />
+    </AppDataProvider>
+  </EmpresaProvider>
 );
 
 export default Index;

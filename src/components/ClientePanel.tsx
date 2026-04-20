@@ -1,7 +1,7 @@
 import React from "react";
 import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
-import { VENDEDORES } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import { heatmapColor } from "@/lib/heatmapColors";
 import StatusBadge from "./StatusBadge";
@@ -15,6 +15,7 @@ interface Props {
 
 const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
   const { mesesCols, overlay, visitas, setVendedor } = useAppData();
+  const { vendedores } = useEmpresa();
 
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const last3 = mesesCols.slice(-3);
@@ -61,7 +62,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
               ) : (
                 <select className="border rounded px-2 py-1 text-sm bg-card" onChange={e => setVendedor(c.Codigo, e.target.value)} defaultValue="">
                   <option value="" disabled>Atribuir</option>
-                  {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+                  {vendedores.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               )}
             </div>

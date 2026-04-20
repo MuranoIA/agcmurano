@@ -34,7 +34,7 @@ function normalizeVendedorCSV(v: string): string {
   return map[v.trim().toLowerCase()] || v;
 }
 
-export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
+export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
   let allData: any[] = [];
   let from = 0;
   const pageSize = 1000;
@@ -42,7 +42,7 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
     const { data, error } = await externalSupabase
       .from("pedidos")
       .select("*")
-      .eq("empresa", "Grandes Contas")
+      .eq("empresa", empresa)
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
@@ -52,11 +52,14 @@ export async function fetchPedidosFromDB(): Promise<{ clientes: Cliente[]; meses
   }
   if (allData.length === 0) return { clientes: [], mesesCols: [] };
 
+  const titleCase = (s: string) => s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const pedidos: Pedido[] = allData.map(r => ({
     pedido: String(r.pedido),
     codCliente: String(r.cod_cliente),
     nome: r.nome,
-    vendedor: normalizeVendedorCSV(r.vendedor),
+    vendedor: empresa === "Grandes Contas"
+      ? normalizeVendedorCSV(r.vendedor)
+      : (r.vendedor ? titleCase(String(r.vendedor)) : ""),
     valor: Number(r.valor) || 0,
     data: parsePedidoDate(r.data),
     tipo: r.tipo as "VENDA" | "DEV",

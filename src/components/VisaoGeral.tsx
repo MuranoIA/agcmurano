@@ -1,5 +1,6 @@
 import React from "react";
-import { Cliente, VENDEDORES } from "@/lib/types";
+import { Cliente } from "@/lib/types";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 import { AlertTriangle, Users, XCircle } from "lucide-react";
@@ -10,7 +11,8 @@ interface Props {
 }
 
 const VisaoGeral: React.FC<Props> = ({ clientes, mesesCols }) => {
-  const vendedorStats = VENDEDORES.map(v => {
+  const { vendedores } = useEmpresa();
+  const vendedorStats = vendedores.map(v => {
     const list = clientes.filter(c => c.Vendedor === v);
     const fatTotal = mesesCols && mesesCols.length > 0
       ? list.reduce((s, c) => s + mesesCols.reduce((ms, m) => ms + (c.meses[m] || 0), 0), 0)

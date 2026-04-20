@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
-import { VENDEDORES } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
 import { ArrowUpDown } from "lucide-react";
 
@@ -15,6 +15,7 @@ type SortKey = keyof Cliente | "lastMonth";
 
 const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
   const { mesesCols, setVendedor } = useAppData();
+  const { vendedores } = useEmpresa();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
   const [sortAsc, setSortAsc] = useState(false);
@@ -79,7 +80,7 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
                 ) : (
                   <select className="border rounded px-1 py-0.5 text-xs bg-card" onChange={e => handleVendedorChange(c.Codigo, e.target.value)} defaultValue="">
                     <option value="" disabled>Atribuir</option>
-                    {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+                    {vendedores.map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 )}
               </td>

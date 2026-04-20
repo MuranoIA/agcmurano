@@ -3,6 +3,7 @@ import { LogOut, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresa, EMPRESAS, Empresa } from "@/contexts/EmpresaContext";
 
 interface Props {
   onNewUpload: () => void;
@@ -11,6 +12,7 @@ interface Props {
 const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
   const { loadCSV } = useAppData();
   const { signOut, user, role } = useAuth();
+  const { empresa, setEmpresa } = useEmpresa();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File) => {
@@ -22,10 +24,33 @@ const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
     reader.readAsText(file, "UTF-8");
   }, [loadCSV]);
 
+  // Different header background per empresa
+  const headerClass =
+    empresa === "Venus"
+      ? "sticky top-0 z-50 bg-[hsl(160_70%_22%)] text-primary-foreground shadow-md"
+      : "sticky top-0 z-50 bg-primary text-primary-foreground shadow-md";
+
   return (
-    <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-md">
-      <div className="container flex items-center justify-between h-14 px-4">
-        <h1 className="text-lg font-bold tracking-tight">Grandes Contas</h1>
+    <header className={headerClass}>
+      <div className="container flex items-center justify-between h-14 px-4 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-lg font-bold tracking-tight truncate">{empresa}</h1>
+          <div className="hidden sm:flex items-center gap-1 bg-primary-foreground/10 rounded-md p-0.5">
+            {EMPRESAS.map((e) => (
+              <button
+                key={e}
+                onClick={() => setEmpresa(e as Empresa)}
+                className={`px-3 py-1 text-xs rounded transition-colors ${
+                  empresa === e
+                    ? "bg-primary-foreground text-foreground font-medium"
+                    : "text-primary-foreground/80 hover:bg-primary-foreground/10"
+                }`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {role === "admin" && (
             <>
