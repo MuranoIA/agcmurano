@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 import AppHeader from "@/components/AppHeader";
@@ -25,7 +26,9 @@ import { parseMesCol } from "@/lib/parseMesCol";
 
 const Dashboard: React.FC = () => {
   const appData = useAppData();
-  const { role } = useAuth();
+  const { role, signOut } = useAuth();
+  const { permissions } = usePermissions();
+  const isVendedorRestrito = permissions?.role === "vendedor";
   const { hasInterior, vendedoresInterior } = useEmpresa();
   const clientes = appData?.clientes ?? [];
   const mesesCols = appData?.mesesCols ?? [];
