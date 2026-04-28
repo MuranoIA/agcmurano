@@ -1,5 +1,6 @@
 import React from "react";
 import { useEmpresa } from "@/contexts/EmpresaContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -14,18 +15,22 @@ interface Props {
 
 const Filters: React.FC<Props> = ({ vendedor, setVendedor, status, setStatus, busca, setBusca }) => {
   const { vendedores } = useEmpresa();
+  const { permissions } = usePermissions();
+  const isVendedorRestrito = permissions?.role === "vendedor";
   const vendedorOpts = ["Todos", ...vendedores];
   const statusOpts = ["Todos", "Ativo", "Risco", "Inativo"];
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
-      <div className="flex gap-1">
-        {vendedorOpts.map(v => (
-          <Button key={v} size="sm" variant={vendedor === v ? "default" : "outline"} onClick={() => setVendedor(v)} className="text-xs">
-            {v}
-          </Button>
-        ))}
-      </div>
+      {!isVendedorRestrito && (
+        <div className="flex gap-1">
+          {vendedorOpts.map(v => (
+            <Button key={v} size="sm" variant={vendedor === v ? "default" : "outline"} onClick={() => setVendedor(v)} className="text-xs">
+              {v}
+            </Button>
+          ))}
+        </div>
+      )}
       <div className="flex gap-1">
         {statusOpts.map(s => (
           <Button key={s} size="sm" variant={status === s ? "default" : "outline"} onClick={() => setStatus(s)} className="text-xs">
