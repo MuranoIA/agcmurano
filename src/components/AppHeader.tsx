@@ -3,7 +3,7 @@ import { LogOut, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEmpresa, EMPRESAS, Empresa } from "@/contexts/EmpresaContext";
+import { useEmpresa, Empresa } from "@/contexts/EmpresaContext";
 
 interface Props {
   onNewUpload: () => void;
@@ -12,7 +12,7 @@ interface Props {
 const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
   const { loadCSV } = useAppData();
   const { signOut, user, role } = useAuth();
-  const { empresa, setEmpresa } = useEmpresa();
+  const { empresa, setEmpresa, empresasPermitidas } = useEmpresa();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File) => {
@@ -35,21 +35,23 @@ const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
       <div className="container flex items-center justify-between h-14 px-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="text-lg font-bold tracking-tight truncate">{empresa}</h1>
-          <div className="hidden sm:flex items-center gap-1 bg-primary-foreground/10 rounded-md p-0.5">
-            {EMPRESAS.map((e) => (
-              <button
-                key={e}
-                onClick={() => setEmpresa(e as Empresa)}
-                className={`px-3 py-1 text-xs rounded transition-colors ${
-                  empresa === e
-                    ? "bg-primary-foreground text-foreground font-medium"
-                    : "text-primary-foreground/80 hover:bg-primary-foreground/10"
-                }`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
+          {empresasPermitidas.length > 1 && (
+            <div className="hidden sm:flex items-center gap-1 bg-primary-foreground/10 rounded-md p-0.5">
+              {empresasPermitidas.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => setEmpresa(e as Empresa)}
+                  className={`px-3 py-1 text-xs rounded transition-colors ${
+                    empresa === e
+                      ? "bg-primary-foreground text-foreground font-medium"
+                      : "text-primary-foreground/80 hover:bg-primary-foreground/10"
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {role === "admin" && (
