@@ -261,12 +261,45 @@ const Dashboard: React.FC = () => {
   );
 };
 
+const PermissionsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { permissions, loading, error } = usePermissions();
+  const { signOut, user } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    );
+  }
+
+  if (!permissions) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-card border rounded-lg shadow-sm p-6 text-center space-y-4">
+          <h1 className="text-xl font-semibold text-foreground">Acesso não autorizado</h1>
+          <p className="text-sm text-muted-foreground">
+            O e-mail <strong>{user?.email}</strong> não possui permissão para acessar este aplicativo.
+            Entre em contato com o administrador.
+          </p>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <Button variant="outline" size="sm" onClick={signOut}>Sair</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
 const Index = () => (
-  <EmpresaProvider>
-    <AppDataProvider>
-      <Dashboard />
-    </AppDataProvider>
-  </EmpresaProvider>
+  <PermissionsGate>
+    <EmpresaProvider>
+      <AppDataProvider>
+        <Dashboard />
+      </AppDataProvider>
+    </EmpresaProvider>
+  </PermissionsGate>
 );
 
 export default Index;
