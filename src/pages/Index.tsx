@@ -218,13 +218,17 @@ const Dashboard: React.FC = () => {
               </div>
               {/* Filters Interior */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
-                {["Todos", ...vendedoresInterior].map(v => (
-                  <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
-                    {v}
-                  </Button>
-                ))}
-                <span className="text-xs text-muted-foreground font-medium ml-4">Status:</span>
+                {!isVendedorRestrito && (
+                  <>
+                    <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
+                    {["Todos", ...vendedoresInterior].map(v => (
+                      <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
+                        {v}
+                      </Button>
+                    ))}
+                  </>
+                )}
+                <span className={`text-xs text-muted-foreground font-medium ${!isVendedorRestrito ? "ml-4" : ""}`}>Status:</span>
                 {["Todos", "Ativo", "Risco", "Inativo"].map(s => (
                   <Button key={s} size="sm" variant={intStatus === s ? "default" : "outline"} onClick={() => setIntStatus(s)} className="text-xs h-7">
                     {s}
