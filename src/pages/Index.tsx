@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 import AppHeader from "@/components/AppHeader";
@@ -26,6 +27,8 @@ import { parseMesCol } from "@/lib/parseMesCol";
 const Dashboard: React.FC = () => {
   const appData = useAppData();
   const { role } = useAuth();
+  const { permissions } = usePermissions();
+  const isVendedorRestrito = permissions?.role === "vendedor";
   const { hasInterior, vendedoresInterior } = useEmpresa();
   const clientes = appData?.clientes ?? [];
   const mesesCols = appData?.mesesCols ?? [];
@@ -215,13 +218,17 @@ const Dashboard: React.FC = () => {
               </div>
               {/* Filters Interior */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
-                {["Todos", ...vendedoresInterior].map(v => (
-                  <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
-                    {v}
-                  </Button>
-                ))}
-                <span className="text-xs text-muted-foreground font-medium ml-4">Status:</span>
+                {!isVendedorRestrito && (
+                  <>
+                    <span className="text-xs text-muted-foreground font-medium">Vendedor:</span>
+                    {["Todos", ...vendedoresInterior].map(v => (
+                      <Button key={v} size="sm" variant={intVendedor === v ? "default" : "outline"} onClick={() => setIntVendedor(v)} className="text-xs h-7">
+                        {v}
+                      </Button>
+                    ))}
+                  </>
+                )}
+                <span className={`text-xs text-muted-foreground font-medium ${!isVendedorRestrito ? "ml-4" : ""}`}>Status:</span>
                 {["Todos", "Ativo", "Risco", "Inativo"].map(s => (
                   <Button key={s} size="sm" variant={intStatus === s ? "default" : "outline"} onClick={() => setIntStatus(s)} className="text-xs h-7">
                     {s}
@@ -254,12 +261,45 @@ const Dashboard: React.FC = () => {
   );
 };
 
+const PermissionsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { permissions, loading, error } = usePermissions();
+  const { signOut, user } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    );
+  }
+
+  if (!permissions) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-card border rounded-lg shadow-sm p-6 text-center space-y-4">
+          <h1 className="text-xl font-semibold text-foreground">Acesso não autorizado</h1>
+          <p className="text-sm text-muted-foreground">
+            O e-mail <strong>{user?.email}</strong> não possui permissão para acessar este aplicativo.
+            Entre em contato com o administrador.
+          </p>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <Button variant="outline" size="sm" onClick={signOut}>Sair</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
 const Index = () => (
-  <EmpresaProvider>
-    <AppDataProvider>
-      <Dashboard />
-    </AppDataProvider>
-  </EmpresaProvider>
+  <PermissionsGate>
+    <EmpresaProvider>
+      <AppDataProvider>
+        <Dashboard />
+      </AppDataProvider>
+    </EmpresaProvider>
+  </PermissionsGate>
 );
 
 export default Index;

@@ -19,6 +19,7 @@ import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/contexts/EmpresaContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 interface AppState {
   clientes: Cliente[];
@@ -52,6 +53,7 @@ function applyOverlay(raw: Cliente[], overlay: OverlayStore, skipValoresMes = fa
 export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, vendorName } = useAuth();
   const { empresa } = useEmpresa();
+  const { permissions } = usePermissions();
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
@@ -195,8 +197,13 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (role === "vendedor" && vendorName) {
       list = list.filter(c => c.Vendedor === vendorName);
     }
+    // Apply user_permissions vendedor_filtro (case-insensitive)
+    if (permissions?.vendedor_filtro) {
+      const filtro = permissions.vendedor_filtro.trim().toLowerCase();
+      list = list.filter(c => c.Vendedor.trim().toLowerCase() === filtro);
+    }
     return list;
-  }, [rawClientes, overlay, role, vendorName, dataFromPedidos]);
+  }, [rawClientes, overlay, role, vendorName, dataFromPedidos, permissions]);
 
   return (
     <Ctx.Provider value={{
