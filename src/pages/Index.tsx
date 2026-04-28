@@ -26,7 +26,7 @@ import { parseMesCol } from "@/lib/parseMesCol";
 
 const Dashboard: React.FC = () => {
   const appData = useAppData();
-  const { role, signOut } = useAuth();
+  const { role } = useAuth();
   const { permissions } = usePermissions();
   const isVendedorRestrito = permissions?.role === "vendedor";
   const { hasInterior, vendedoresInterior } = useEmpresa();
