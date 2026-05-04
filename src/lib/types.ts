@@ -36,5 +36,5 @@ export interface OverlayStore {
   visitas: Visita[];
 }
 
-export const VENDEDORES = ["Jacques", "Maiara", "Hugo"] as const;
-export const VENDEDORES_INTERIOR = ["Jacques Interior", "Maiara Interior", "Hugo Interior"] as const;
+export const VENDEDORES = ["Jacques", "Maiara", "Jennifer"] as const;
+export const VENDEDORES_INTERIOR = ["Jacques Interior", "Maiara Interior", "Jennifer Interior"] as const;
