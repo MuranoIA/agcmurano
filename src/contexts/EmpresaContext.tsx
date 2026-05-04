@@ -6,12 +6,12 @@ export type Empresa = "Grandes Contas" | "Venus";
 export const EMPRESAS: Empresa[] = ["Grandes Contas", "Venus"];
 
 const VENDEDORES_POR_EMPRESA: Record<Empresa, string[]> = {
-  "Grandes Contas": ["Jacques", "Maiara", "Hugo"],
+  "Grandes Contas": ["Jacques", "Maiara", "Jennifer"],
   "Venus": ["Anne", "Thiago", "Henry", "Milene", "Thamires"],
 };
 
 const VENDEDORES_INTERIOR_POR_EMPRESA: Record<Empresa, string[]> = {
-  "Grandes Contas": ["Jacques Interior", "Maiara Interior", "Hugo Interior"],
+  "Grandes Contas": ["Jacques Interior", "Maiara Interior", "Jennifer Interior"],
   "Venus": [],
 };
 
