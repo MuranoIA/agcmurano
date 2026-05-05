@@ -5,33 +5,52 @@ import { Json } from "@/integrations/supabase/types";
 import { Pedido, parsePedidoDate, processPedidos } from "./csvParser";
 
 // ---- VENDEDOR NAME NORMALIZATION ----
+// Dynamic title-case so any vendedor name in the DB is handled automatically.
+// "jaques" -> "Jacques" alias kept for legacy CSVs.
 
-const VENDEDOR_NORMALIZE: Record<string, string> = {
-  "jaques": "Jacques",
-  "jacques": "Jacques",
-  "hugo": "Hugo",
-  "maiara": "Maiara",
-  "jacques interior": "Jacques Interior",
-  "jaques interior": "Jacques Interior",
-  "hugo interior": "Hugo Interior",
-  "maiara interior": "Maiara Interior",
+const VENDEDOR_ALIASES: Record<string, string> = {
+  "jaques": "jacques",
+  "jaques interior": "jacques interior",
 };
+
+function titleCaseVendedor(s: string): string {
+  return s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
 
 function normalizeVendedor(v: string | null | undefined): string {
   if (!v) return "";
   const key = v.trim().toLowerCase();
-  return VENDEDOR_NORMALIZE[key] || v;
+  const aliased = VENDEDOR_ALIASES[key] || key;
+  return titleCaseVendedor(aliased);
 }
 
 // ---- PEDIDOS (from Supabase) ----
 
 function normalizeVendedorCSV(v: string): string {
-  const map: Record<string, string> = {
-    "jaques": "Jacques", "jacques": "Jacques", "hugo": "Hugo", "maiara": "Maiara",
-    "jacques interior": "Jacques Interior", "jaques interior": "Jacques Interior",
-    "hugo interior": "Hugo Interior", "maiara interior": "Maiara Interior",
+  return normalizeVendedor(v);
+}
+
+export async function fetchVendedoresFromDB(empresa: string): Promise<{ vendedores: string[]; vendedoresInterior: string[] }> {
+  const { data, error } = await externalSupabase
+    .from("pedidos")
+    .select("vendedor")
+    .eq("empresa", empresa)
+    .not("vendedor", "is", null);
+  if (error) throw error;
+  const setGeral = new Set<string>();
+  const setInterior = new Set<string>();
+  (data || []).forEach((r: any) => {
+    const raw = (r.vendedor || "").trim();
+    if (!raw) return;
+    const normalized = normalizeVendedor(raw);
+    if (raw.toLowerCase().includes("interior")) setInterior.add(normalized);
+    else setGeral.add(normalized);
+  });
+  const sortFn = (a: string, b: string) => a.localeCompare(b, "pt-BR");
+  return {
+    vendedores: [...setGeral].sort(sortFn),
+    vendedoresInterior: [...setInterior].sort(sortFn),
   };
-  return map[v.trim().toLowerCase()] || v;
 }
 
 export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {

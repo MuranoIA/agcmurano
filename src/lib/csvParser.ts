@@ -5,12 +5,12 @@ const MESES_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","N
 const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function normalizeVendedor(v: string): string {
-  const map: Record<string, string> = {
-    "jaques": "Jacques", "jacques": "Jacques", "hugo": "Hugo", "maiara": "Maiara",
-    "jacques interior": "Jacques Interior", "jaques interior": "Jacques Interior",
-    "hugo interior": "Hugo Interior", "maiara interior": "Maiara Interior",
-  };
-  return map[v.trim().toLowerCase()] || v;
+  if (!v) return "";
+  // Aliases
+  let key = v.trim().toLowerCase();
+  if (key === "jaques") key = "jacques";
+  if (key === "jaques interior") key = "jacques interior";
+  return key.replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function parseNum(v: string): number {
