@@ -1,19 +1,10 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { fetchVendedoresFromDB } from "@/lib/supabaseService";
 
 export type Empresa = "Grandes Contas" | "Venus";
 
 export const EMPRESAS: Empresa[] = ["Grandes Contas", "Venus"];
-
-const VENDEDORES_POR_EMPRESA: Record<Empresa, string[]> = {
-  "Grandes Contas": ["Jacques", "Maiara", "Jennifer"],
-  "Venus": ["Anne", "Thiago", "Henry", "Milene", "Thamires"],
-};
-
-const VENDEDORES_INTERIOR_POR_EMPRESA: Record<Empresa, string[]> = {
-  "Grandes Contas": ["Jacques Interior", "Maiara Interior", "Jennifer Interior"],
-  "Venus": [],
-};
 
 interface EmpresaState {
   empresa: Empresa;
@@ -43,6 +34,9 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return "Grandes Contas";
   });
 
+  const [vendedores, setVendedores] = useState<string[]>([]);
+  const [vendedoresInterior, setVendedoresInterior] = useState<string[]>([]);
+
   // Adjust selected empresa if not allowed
   useEffect(() => {
     if (empresasPermitidas.length === 0) return;
@@ -53,25 +47,40 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [empresasPermitidas, empresa]);
 
+  // Load vendedores dynamically from DB whenever empresa changes
+  useEffect(() => {
+    let cancelled = false;
+    fetchVendedoresFromDB(empresa)
+      .then(({ vendedores: v, vendedoresInterior: vi }) => {
+        if (cancelled) return;
+        setVendedores(v);
+        setVendedoresInterior(vi);
+      })
+      .catch(err => {
+        console.error("Erro ao carregar vendedores:", err);
+        if (!cancelled) {
+          setVendedores([]);
+          setVendedoresInterior([]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [empresa]);
+
   const setEmpresa = (e: Empresa) => {
     if (empresasPermitidas.length > 0 && !empresasPermitidas.includes(e)) return;
     localStorage.setItem(STORAGE_KEY, e);
     setEmpresaState(e);
   };
 
-  const value = useMemo<EmpresaState>(() => {
-    const vendedores = VENDEDORES_POR_EMPRESA[empresa];
-    const vendedoresInterior = VENDEDORES_INTERIOR_POR_EMPRESA[empresa];
-    return {
-      empresa,
-      setEmpresa,
-      vendedores,
-      vendedoresInterior,
-      hasInterior: vendedoresInterior.length > 0,
-      empresasPermitidas,
-    };
+  const value = useMemo<EmpresaState>(() => ({
+    empresa,
+    setEmpresa,
+    vendedores,
+    vendedoresInterior,
+    hasInterior: vendedoresInterior.length > 0,
+    empresasPermitidas,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresa, empresasPermitidas]);
+  }), [empresa, empresasPermitidas, vendedores, vendedoresInterior]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
