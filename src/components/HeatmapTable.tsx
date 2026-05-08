@@ -19,7 +19,7 @@ const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) =
   const [filterCondicao, setFilterCondicao] = useState("Todos");
 
   // Build months strictly from the De/Até period
-  const mesesCols = useMemo(() => {
+  const mesesColsAll = useMemo(() => {
     if (mesesColsProp && mesesColsProp.length > 0) return mesesColsProp;
     const from = ctx.periodFrom;
     const to = ctx.periodTo;
@@ -33,6 +33,11 @@ const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) =
     }
     return cols;
   }, [mesesColsProp, ctx.periodFrom, ctx.periodTo, ctx.mesesCols]);
+
+  // Hide month columns that have no data across all clients
+  const mesesCols = useMemo(() => {
+    return mesesColsAll.filter(m => clientes.some(c => (c.meses[m] || 0) !== 0));
+  }, [mesesColsAll, clientes]);
 
   // Period-scoped values (c.meses already filtered by the period in AppDataContext)
   const valOf = (c: Cliente, m: string) => c.meses[m] || 0;
