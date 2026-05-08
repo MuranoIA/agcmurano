@@ -17,7 +17,8 @@ export interface Cliente {
   Primeira_Compra: string;
   Ultima_Compra: string;
   Segmento: string;
-  meses: Record<string, number>; // "Jan/25" -> value
+  meses: Record<string, number>; // "Jan/25" -> value (period-scoped)
+  mesesFull?: Record<string, number>; // full history (used by Heatmap)
 }
 
 export interface Visita {

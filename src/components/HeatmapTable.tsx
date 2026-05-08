@@ -16,10 +16,12 @@ const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) =
   const [filterMes, setFilterMes] = useState("Todos");
   const [filterCondicao, setFilterCondicao] = useState("Todos");
 
+  const mesesOf = (c: Cliente) => c.mesesFull ?? c.meses;
+
   const filtered = useMemo(() => {
     if (filterMes === "Todos" || filterCondicao === "Todos") return clientes;
     return clientes.filter(c => {
-      const val = c.meses[filterMes] || 0;
+      const val = mesesOf(c)[filterMes] || 0;
       switch (filterCondicao) {
         case "Com compra": return val > 0;
         case "Sem compra": return val === 0;
@@ -80,7 +82,7 @@ const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) =
                 <td className="sticky left-[80px] z-10 bg-card px-3 py-1.5 font-medium truncate max-w-[180px] border-r">{c.Nome}</td>
                 <td className="sticky left-[260px] z-10 bg-card px-3 py-1.5 text-right border-r">{fmtBRLShort(c.TM_Mes)}</td>
                 {mesesCols.map(m => {
-                  const val = c.meses[m] || 0;
+                  const val = mesesOf(c)[m] || 0;
                   const { bg, fg } = heatmapColor(val, c.TM_Mes);
                   return (
                     <td
@@ -104,7 +106,7 @@ const HeatmapTable: React.FC<Props> = ({ clientes, mesesCols: mesesColsProp }) =
                 {fmtBRLShort(filtered.reduce((s, c) => s + (c.TM_Mes || 0), 0) / (filtered.length || 1))}
               </td>
               {mesesCols.map(m => {
-                const total = filtered.reduce((s, c) => s + (c.meses[m] || 0), 0);
+                const total = filtered.reduce((s, c) => s + (mesesOf(c)[m] || 0), 0);
                 return (
                   <td key={m} className="px-1 py-2 text-center font-semibold">
                     {total > 0 ? fmtBRLShort(total) : "—"}
