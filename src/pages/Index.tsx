@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
 
           {role === "admin" && (
             <TabsContent value="visao">
-              <VisaoGeral clientes={filtered} mesesCols={filteredMesesCols} />
+              <VisaoGeral clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
             </TabsContent>
           )}
 
