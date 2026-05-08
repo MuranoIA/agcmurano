@@ -272,9 +272,6 @@ export function processPedidos(
       Segmento: segmento,
       meses: mesesMap,
     }];
-      Segmento: segmento,
-      meses: mesesMap,
-    };
   });
 
   // Sort month columns chronologically
