@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Cliente, OverlayStore, Visita } from "@/lib/types";
-import { parseCSV } from "@/lib/csvParser";
+import { parseCSV, processPedidos, Pedido } from "@/lib/csvParser";
 import {
   fetchClientes,
   upsertClientes,
