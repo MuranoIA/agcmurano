@@ -61,12 +61,28 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { empresa } = useEmpresa();
   const { permissions } = usePermissions();
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
+  const [rawPedidos, setRawPedidos] = useState<Pedido[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
   const [dataFromPedidos, setDataFromPedidos] = useState(false);
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const defaultPeriod = () => {
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth(), 1),
+      to: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    };
+  };
+  const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => defaultPeriod().from);
+  const [periodTo, setPeriodTo] = useState<Date | undefined>(() => defaultPeriod().to);
+  const resetPeriod = useCallback(() => {
+    const d = defaultPeriod();
+    setPeriodFrom(d.from);
+    setPeriodTo(d.to);
+  }, []);
 
   const refreshData = useCallback(async () => {
     try {
@@ -77,6 +93,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ]);
       if (pedidosResult.clientes.length > 0) {
         setRawClientes(pedidosResult.clientes);
+        setRawPedidos(pedidosResult.pedidos);
         if (pedidosResult.mesesCols.length > 0) setMesesCols(pedidosResult.mesesCols);
         setCsvLoaded(true);
         setDataFromPedidos(true);
@@ -84,12 +101,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Fallback to clientes table only for Grandes Contas
         const clientesResult = await fetchClientes();
         setRawClientes(clientesResult.clientes);
+        setRawPedidos([]);
         if (clientesResult.mesesCols.length > 0) setMesesCols(clientesResult.mesesCols);
         setCsvLoaded(clientesResult.clientes.length > 0);
+        setDataFromPedidos(false);
       } else {
         setRawClientes([]);
+        setRawPedidos([]);
         setMesesCols([]);
         setCsvLoaded(false);
+        setDataFromPedidos(false);
       }
       setOverlay(overlayResult);
       setVisitas(visitasResult);
