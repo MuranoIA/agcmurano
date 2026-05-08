@@ -65,10 +65,11 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo }) => {
             <tr className="bg-muted/50">
               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Vendedor</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Clientes</th>
+              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Positivados</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Ativos</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Risco</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Inativos</th>
-              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Fat. Total</th>
+              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Fat. Período</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">TM/Mês médio</th>
             </tr>
           </thead>
@@ -77,6 +78,7 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo }) => {
               <tr key={v.nome} className={i % 2 ? "bg-muted/10" : ""}>
                 <td className="px-3 py-2 font-medium">{v.nome}</td>
                 <td className="px-3 py-2 text-right">{v.total}</td>
+                <td className="px-3 py-2 text-right text-primary font-medium">{v.positivados}</td>
                 <td className="px-3 py-2 text-right text-green-600">{v.ativos}</td>
                 <td className="px-3 py-2 text-right text-yellow-600">{v.risco}</td>
                 <td className="px-3 py-2 text-right text-red-600">{v.inativos}</td>
