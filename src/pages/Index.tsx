@@ -130,9 +130,9 @@ const Dashboard: React.FC = () => {
       <div className="container px-4 py-4">
         {activeTab !== "interior" && (
           <>
-            <KPIBar clientes={filtered} mesesCols={filteredMesesCols} />
+            <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
             <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
-            <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={handleResetPeriod} />
+            <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
           </>
         )}
 
