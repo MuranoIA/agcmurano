@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
             <ClienteTable clientes={filtered} onSelect={setSelectedCliente} />
           </TabsContent>
           <TabsContent value="heatmap">
-            <HeatmapTable clientes={filtered} mesesCols={filteredMesesCols} />
+            <HeatmapTable clientes={filtered} mesesCols={mesesCols} />
           </TabsContent>
           <TabsContent value="agenda">
             <AgendaVisitas clientes={filtered} />
