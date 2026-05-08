@@ -28,6 +28,12 @@ interface AppState {
   overlay: OverlayStore;
   visitas: (Visita & { id?: string })[];
   loading: boolean;
+  periodFrom: Date | undefined;
+  periodTo: Date | undefined;
+  setPeriodFrom: (d: Date | undefined) => void;
+  setPeriodTo: (d: Date | undefined) => void;
+  resetPeriod: () => void;
+  mesesNoPeriodo: number;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
