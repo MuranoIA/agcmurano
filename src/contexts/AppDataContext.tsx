@@ -215,22 +215,40 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [csvLoaded, rawClientes, refreshData]);
 
+  // Recompute period-scoped clientes when rawPedidos or period changes
+  const periodClientes = useMemo(() => {
+    if (dataFromPedidos && rawPedidos.length > 0) {
+      return processPedidos(rawPedidos, { from: periodFrom, to: periodTo }).clientes;
+    }
+    return rawClientes;
+  }, [dataFromPedidos, rawPedidos, periodFrom, periodTo, rawClientes]);
+
   const clientes = useMemo(() => {
-    let list = applyOverlay(rawClientes, overlay, dataFromPedidos);
-    // Recalculate derived fields locally
-    list = recalcAllClientes(list);
+    let list = applyOverlay(periodClientes, overlay, dataFromPedidos);
+    // Recalculate derived fields locally (skipped via dataFromPedidos = true since periodClientes already computed everything;
+    // recalcAllClientes uses today as ref, which would override Status. Skip when period data is canonical.)
+    if (!dataFromPedidos) {
+      list = recalcAllClientes(list);
+    }
     // Filter out clients without vendedor
     list = list.filter(c => !!c.Vendedor);
     if (role === "vendedor" && vendorName) {
       list = list.filter(c => c.Vendedor === vendorName);
     }
-    // Apply user_permissions vendedor_filtro (case-insensitive)
     if (permissions?.vendedor_filtro) {
       const filtro = permissions.vendedor_filtro.trim().toLowerCase();
       list = list.filter(c => c.Vendedor.trim().toLowerCase() === filtro);
     }
     return list;
-  }, [rawClientes, overlay, role, vendorName, dataFromPedidos, permissions]);
+  }, [periodClientes, overlay, role, vendorName, dataFromPedidos, permissions]);
+
+  // Months covered by current period (used for averaging)
+  const mesesNoPeriodo = useMemo(() => {
+    const from = periodFrom ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const to = periodTo ?? new Date();
+    const months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1;
+    return Math.max(1, months);
+  }, [periodFrom, periodTo]);
 
   return (
     <Ctx.Provider value={{
@@ -240,6 +258,12 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       overlay,
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
+      periodFrom,
+      periodTo,
+      setPeriodFrom,
+      setPeriodTo,
+      resetPeriod,
+      mesesNoPeriodo,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,
