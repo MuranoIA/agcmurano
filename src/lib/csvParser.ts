@@ -271,6 +271,7 @@ export function processPedidos(
       Ultima_Compra: formatDateOnly(ultimaCompraRef),
       Segmento: segmento,
       meses: mesesMap,
+      mesesFull: mesesMapFull,
     }];
   });
 
