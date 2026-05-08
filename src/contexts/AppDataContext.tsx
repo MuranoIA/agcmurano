@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Cliente, OverlayStore, Visita } from "@/lib/types";
-import { parseCSV } from "@/lib/csvParser";
+import { parseCSV, processPedidos, Pedido } from "@/lib/csvParser";
 import {
   fetchClientes,
   upsertClientes,
@@ -28,6 +28,12 @@ interface AppState {
   overlay: OverlayStore;
   visitas: (Visita & { id?: string })[];
   loading: boolean;
+  periodFrom: Date | undefined;
+  periodTo: Date | undefined;
+  setPeriodFrom: (d: Date | undefined) => void;
+  setPeriodTo: (d: Date | undefined) => void;
+  resetPeriod: () => void;
+  mesesNoPeriodo: number;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
@@ -55,12 +61,28 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { empresa } = useEmpresa();
   const { permissions } = usePermissions();
   const [rawClientes, setRawClientes] = useState<Cliente[]>([]);
+  const [rawPedidos, setRawPedidos] = useState<Pedido[]>([]);
   const [mesesCols, setMesesCols] = useState<string[]>([]);
   const [csvLoaded, setCsvLoaded] = useState(false);
   const [dataFromPedidos, setDataFromPedidos] = useState(false);
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const defaultPeriod = () => {
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth(), 1),
+      to: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    };
+  };
+  const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => defaultPeriod().from);
+  const [periodTo, setPeriodTo] = useState<Date | undefined>(() => defaultPeriod().to);
+  const resetPeriod = useCallback(() => {
+    const d = defaultPeriod();
+    setPeriodFrom(d.from);
+    setPeriodTo(d.to);
+  }, []);
 
   const refreshData = useCallback(async () => {
     try {
@@ -71,6 +93,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ]);
       if (pedidosResult.clientes.length > 0) {
         setRawClientes(pedidosResult.clientes);
+        setRawPedidos(pedidosResult.pedidos);
         if (pedidosResult.mesesCols.length > 0) setMesesCols(pedidosResult.mesesCols);
         setCsvLoaded(true);
         setDataFromPedidos(true);
@@ -78,12 +101,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Fallback to clientes table only for Grandes Contas
         const clientesResult = await fetchClientes();
         setRawClientes(clientesResult.clientes);
+        setRawPedidos([]);
         if (clientesResult.mesesCols.length > 0) setMesesCols(clientesResult.mesesCols);
         setCsvLoaded(clientesResult.clientes.length > 0);
+        setDataFromPedidos(false);
       } else {
         setRawClientes([]);
+        setRawPedidos([]);
         setMesesCols([]);
         setCsvLoaded(false);
+        setDataFromPedidos(false);
       }
       setOverlay(overlayResult);
       setVisitas(visitasResult);
@@ -188,22 +215,40 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [csvLoaded, rawClientes, refreshData]);
 
+  // Recompute period-scoped clientes when rawPedidos or period changes
+  const periodClientes = useMemo(() => {
+    if (dataFromPedidos && rawPedidos.length > 0) {
+      return processPedidos(rawPedidos, { from: periodFrom, to: periodTo }).clientes;
+    }
+    return rawClientes;
+  }, [dataFromPedidos, rawPedidos, periodFrom, periodTo, rawClientes]);
+
   const clientes = useMemo(() => {
-    let list = applyOverlay(rawClientes, overlay, dataFromPedidos);
-    // Recalculate derived fields locally
-    list = recalcAllClientes(list);
+    let list = applyOverlay(periodClientes, overlay, dataFromPedidos);
+    // Recalculate derived fields locally (skipped via dataFromPedidos = true since periodClientes already computed everything;
+    // recalcAllClientes uses today as ref, which would override Status. Skip when period data is canonical.)
+    if (!dataFromPedidos) {
+      list = recalcAllClientes(list);
+    }
     // Filter out clients without vendedor
     list = list.filter(c => !!c.Vendedor);
     if (role === "vendedor" && vendorName) {
       list = list.filter(c => c.Vendedor === vendorName);
     }
-    // Apply user_permissions vendedor_filtro (case-insensitive)
     if (permissions?.vendedor_filtro) {
       const filtro = permissions.vendedor_filtro.trim().toLowerCase();
       list = list.filter(c => c.Vendedor.trim().toLowerCase() === filtro);
     }
     return list;
-  }, [rawClientes, overlay, role, vendorName, dataFromPedidos, permissions]);
+  }, [periodClientes, overlay, role, vendorName, dataFromPedidos, permissions]);
+
+  // Months covered by current period (used for averaging)
+  const mesesNoPeriodo = useMemo(() => {
+    const from = periodFrom ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const to = periodTo ?? new Date();
+    const months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1;
+    return Math.max(1, months);
+  }, [periodFrom, periodTo]);
 
   return (
     <Ctx.Provider value={{
@@ -213,6 +258,12 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       overlay,
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       loading,
+      periodFrom,
+      periodTo,
+      setPeriodFrom,
+      setPeriodTo,
+      resetPeriod,
+      mesesNoPeriodo,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,

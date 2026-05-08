@@ -109,7 +109,15 @@ export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string
   return processPedidos(pedidos);
 }
 
-export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesCols: string[] } {
+export interface ProcessOpts {
+  from?: Date;
+  to?: Date;
+}
+
+export function processPedidos(
+  pedidos: Pedido[],
+  opts?: ProcessOpts,
+): { clientes: Cliente[]; mesesCols: string[] } {
   // Group by client
   const groups: Record<string, Pedido[]> = {};
   for (const p of pedidos) {
@@ -118,39 +126,76 @@ export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesC
   }
 
   const today = new Date();
+  const fromDate = opts?.from
+    ? new Date(opts.from.getFullYear(), opts.from.getMonth(), opts.from.getDate())
+    : undefined;
+  const toDate = opts?.to
+    ? new Date(opts.to.getFullYear(), opts.to.getMonth(), opts.to.getDate(), 23, 59, 59, 999)
+    : undefined;
+  const referenceDate = toDate
+    ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate())
+    : today;
+
+  const inPeriod = (d: Date) => {
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    return true;
+  };
+
   const allMesesSet = new Set<string>();
 
-  const clientes: Cliente[] = Object.entries(groups).map(([codigo, peds]) => {
+  const clientes: Cliente[] = Object.entries(groups).flatMap(([codigo, peds]) => {
     const nome = peds[0].nome;
     const vendedor = peds[0].vendedor;
     const segmento = vendedor.toLowerCase().includes("interior") ? "interior" : "capital";
 
-    // Monthly billing
+    // Drop clients whose first purchase is after referenceDate (didn't exist yet)
+    const allDates = peds.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());
+    if (allDates[0] > referenceDate) return [];
+
+    // Period-scoped pedidos (used for Fat/meses/N_Pedidos)
+    const pedsPeriod = peds.filter(p => inPeriod(p.data));
+
+    // Monthly billing — period-scoped
     const mesesMap: Record<string, number> = {};
-    for (const p of peds) {
+    for (const p of pedsPeriod) {
       const mesKey = fmtMesCol(p.data);
       if (!mesesMap[mesKey]) mesesMap[mesKey] = 0;
       mesesMap[mesKey] += p.tipo === "VENDA" ? p.valor : -p.valor;
     }
     Object.keys(mesesMap).forEach(k => allMesesSet.add(k));
 
-    // N_Pedidos (only VENDA)
-    const vendas = peds.filter(p => p.tipo === "VENDA");
-    const nPedidos = vendas.length;
+    // Full monthly map (used for TM_Mes and full mesesCols set)
+    const mesesMapFull: Record<string, number> = {};
+    for (const p of peds) {
+      const mesKey = fmtMesCol(p.data);
+      if (!mesesMapFull[mesKey]) mesesMapFull[mesKey] = 0;
+      mesesMapFull[mesKey] += p.tipo === "VENDA" ? p.valor : -p.valor;
+    }
+    Object.keys(mesesMapFull).forEach(k => allMesesSet.add(k));
 
-    // Fat_Total (sum of all monthly net billing)
+    // N_Pedidos (period, VENDA only)
+    const vendasPeriod = pedsPeriod.filter(p => p.tipo === "VENDA");
+    const nPedidos = vendasPeriod.length;
+
+    // Fat_Total (period net)
     const fatTotal = Object.values(mesesMap).reduce((s, v) => s + v, 0);
 
-    // Dates
-    const allDates = peds.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());
+    // Full vendas history (for ciclo + ultima compra reference)
+    const vendas = peds.filter(p => p.tipo === "VENDA");
     const vendaDates = vendas.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());
     const primeiraCompra = allDates[0];
-    const ultimaCompra = vendaDates.length > 0 ? vendaDates[vendaDates.length - 1] : allDates[allDates.length - 1];
 
-    // DSC
-    const dsc = daysBetween(ultimaCompra, today);
+    // Última compra (full history, mas para DSC consideramos só <= referenceDate)
+    const vendaDatesUntilRef = vendaDates.filter(d => d <= referenceDate);
+    const ultimaCompraRef = vendaDatesUntilRef.length > 0
+      ? vendaDatesUntilRef[vendaDatesUntilRef.length - 1]
+      : allDates.filter(d => d <= referenceDate).pop() || allDates[allDates.length - 1];
 
-    // MCC - months with billing > 0
+    // DSC relativo à data final do período
+    const dsc = daysBetween(ultimaCompraRef, referenceDate);
+
+    // MCC - months with billing > 0 (period)
     const mcc = Object.values(mesesMap).filter(v => v > 0).length;
 
     // Ciclo Médio - average days between consecutive unique purchase dates (VENDA only)
@@ -166,13 +211,15 @@ export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesC
       cicloMedio = Math.round((totalDays / (uniqueVendaDates.length - 1)) * 10) / 10;
     }
 
-    // TM_Mes - based on 11 months before current month
-    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // TM_Mes - 11 months before fromDate's month (or current month if no period)
+    const refMonth = fromDate
+      ? new Date(fromDate.getFullYear(), fromDate.getMonth(), 1)
+      : new Date(today.getFullYear(), today.getMonth(), 1);
     let tmFat = 0;
     for (let i = 1; i <= 11; i++) {
-      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i, 1);
+      const d = new Date(refMonth.getFullYear(), refMonth.getMonth() - i, 1);
       const key = fmtMesCol(d);
-      tmFat += mesesMap[key] || 0;
+      tmFat += mesesMapFull[key] || 0;
     }
     const tmMes = tmFat / 11;
 
@@ -204,7 +251,7 @@ export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesC
       proximaAcao = `Visitar em ${diasParaAcao}d`;
     }
 
-    return {
+    return [{
       Codigo: codigo,
       Nome: nome,
       Vendedor: vendedor,
@@ -221,10 +268,10 @@ export function processPedidos(pedidos: Pedido[]): { clientes: Cliente[]; mesesC
       N_Pedidos: nPedidos,
       Fat_Total: fatTotal,
       Primeira_Compra: formatDateOnly(primeiraCompra),
-      Ultima_Compra: formatDateOnly(ultimaCompra),
+      Ultima_Compra: formatDateOnly(ultimaCompraRef),
       Segmento: segmento,
       meses: mesesMap,
-    };
+    }];
   });
 
   // Sort month columns chronologically

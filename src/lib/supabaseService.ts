@@ -53,7 +53,7 @@ export async function fetchVendedoresFromDB(empresa: string): Promise<{ vendedor
   };
 }
 
-export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[] }> {
+export async function fetchPedidosRawFromDB(empresa: string = "Grandes Contas"): Promise<Pedido[]> {
   let allData: any[] = [];
   let from = 0;
   const pageSize = 1000;
@@ -69,10 +69,9 @@ export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Pr
     if (data.length < pageSize) break;
     from += pageSize;
   }
-  if (allData.length === 0) return { clientes: [], mesesCols: [] };
-
+  if (allData.length === 0) return [];
   const titleCase = (s: string) => s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  const pedidos: Pedido[] = allData.map(r => ({
+  return allData.map(r => ({
     pedido: String(r.pedido),
     codCliente: String(r.cod_cliente),
     nome: r.nome,
@@ -83,8 +82,13 @@ export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Pr
     data: parsePedidoDate(r.data),
     tipo: r.tipo as "VENDA" | "DEV",
   }));
+}
 
-  return processPedidos(pedidos);
+export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[]; pedidos: Pedido[] }> {
+  const pedidos = await fetchPedidosRawFromDB(empresa);
+  if (pedidos.length === 0) return { clientes: [], mesesCols: [], pedidos: [] };
+  const result = processPedidos(pedidos);
+  return { ...result, pedidos };
 }
 
 // ---- CLIENTES ----

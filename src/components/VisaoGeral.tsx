@@ -7,22 +7,21 @@ import { AlertTriangle, Users, XCircle } from "lucide-react";
 
 interface Props {
   clientes: Cliente[];
-  mesesCols?: string[];
+  mesesNoPeriodo: number;
 }
 
-const VisaoGeral: React.FC<Props> = ({ clientes, mesesCols }) => {
+const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo }) => {
   const { vendedores } = useEmpresa();
+  const meses = Math.max(1, mesesNoPeriodo);
   const vendedorStats = vendedores.map(v => {
     const list = clientes.filter(c => c.Vendedor === v);
-    const fatTotal = mesesCols && mesesCols.length > 0
-      ? list.reduce((s, c) => s + mesesCols.reduce((ms, m) => ms + (c.meses[m] || 0), 0), 0)
-      : list.reduce((s, c) => s + c.Fat_Total, 0);
-    const tmMesAvg = mesesCols && mesesCols.length > 0 && list.length
-      ? fatTotal / mesesCols.length / list.length
-      : list.length ? list.reduce((s, c) => s + c.TM_Mes, 0) / list.length : 0;
+    const fatTotal = list.reduce((s, c) => s + c.Fat_Total, 0);
+    const positivados = list.filter(c => c.N_Pedidos > 0).length;
+    const tmMesAvg = list.length ? fatTotal / meses / list.length : 0;
     return {
       nome: v,
       total: list.length,
+      positivados,
       fatTotal,
       ativos: list.filter(c => c.Status === "Ativo").length,
       risco: list.filter(c => c.Status === "Risco").length,
@@ -44,7 +43,9 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesCols }) => {
             <div className="grid grid-cols-2 gap-y-1 text-xs">
               <span className="text-muted-foreground">Clientes</span>
               <span className="text-right font-medium">{v.total}</span>
-              <span className="text-muted-foreground">Fat. Total</span>
+              <span className="text-muted-foreground">Positivados</span>
+              <span className="text-right font-medium text-primary">{v.positivados}</span>
+              <span className="text-muted-foreground">Fat. Período</span>
               <span className="text-right font-medium">{fmtBRL(v.fatTotal)}</span>
               <span className="text-muted-foreground">Ativos</span>
               <span className="text-right font-medium text-green-600">{v.ativos}</span>
@@ -64,10 +65,11 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesCols }) => {
             <tr className="bg-muted/50">
               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Vendedor</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Clientes</th>
+              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Positivados</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Ativos</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Risco</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Inativos</th>
-              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Fat. Total</th>
+              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Fat. Período</th>
               <th className="px-3 py-2 text-right font-medium text-muted-foreground">TM/Mês médio</th>
             </tr>
           </thead>
@@ -76,6 +78,7 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesCols }) => {
               <tr key={v.nome} className={i % 2 ? "bg-muted/10" : ""}>
                 <td className="px-3 py-2 font-medium">{v.nome}</td>
                 <td className="px-3 py-2 text-right">{v.total}</td>
+                <td className="px-3 py-2 text-right text-primary font-medium">{v.positivados}</td>
                 <td className="px-3 py-2 text-right text-green-600">{v.ativos}</td>
                 <td className="px-3 py-2 text-right text-yellow-600">{v.risco}</td>
                 <td className="px-3 py-2 text-right text-red-600">{v.inativos}</td>

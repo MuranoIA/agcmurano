@@ -22,7 +22,7 @@ import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { parseMesCol } from "@/lib/parseMesCol";
+
 
 const Dashboard: React.FC = () => {
   const appData = useAppData();
@@ -34,6 +34,12 @@ const Dashboard: React.FC = () => {
   const mesesCols = appData?.mesesCols ?? [];
   const csvLoaded = appData?.csvLoaded ?? false;
   const loading = appData?.loading ?? true;
+  const periodFrom = appData?.periodFrom;
+  const periodTo = appData?.periodTo;
+  const setPeriodFrom = appData?.setPeriodFrom ?? (() => {});
+  const setPeriodTo = appData?.setPeriodTo ?? (() => {});
+  const resetPeriod = appData?.resetPeriod ?? (() => {});
+  const mesesNoPeriodo = appData?.mesesNoPeriodo ?? 1;
   const [vendedor, setVendedor] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
@@ -50,14 +56,6 @@ const Dashboard: React.FC = () => {
     setIntVendedor("Todos");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasInterior]);
-  const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
-  const [periodTo, setPeriodTo] = useState<Date | undefined>(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  });
 
   // Interior filters
   const [intVendedor, setIntVendedor] = useState("Todos");
@@ -90,24 +88,7 @@ const Dashboard: React.FC = () => {
     return list;
   }, [clientesInterior, intVendedor, intStatus, intBusca]);
 
-  const filteredMesesCols = useMemo(() => {
-    if (!periodFrom && !periodTo) return mesesCols;
-    return mesesCols.filter(m => {
-      const d = parseMesCol(m);
-      if (!d) return true;
-      if (periodFrom && d < periodFrom) return false;
-      if (periodTo && d > periodTo) return false;
-      return true;
-    });
-  }, [mesesCols, periodFrom, periodTo]);
-
   const handleNewUpload = useCallback(() => {}, []);
-
-  const handleResetPeriod = useCallback(() => {
-    const now = new Date();
-    setPeriodFrom(new Date(now.getFullYear(), now.getMonth(), 1));
-    setPeriodTo(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-  }, []);
 
   const exportAll = () => {
     const headers = ["Codigo", "Nome", "Vendedor", "Status", "TM_Mes", "Objetivo_R$", "Ciclo_Medio_d", "MCC", "Dias_Sem_Compra", "Proxima_Acao", "Fat_Total", ...mesesCols];
@@ -149,9 +130,9 @@ const Dashboard: React.FC = () => {
       <div className="container px-4 py-4">
         {activeTab !== "interior" && (
           <>
-            <KPIBar clientes={filtered} mesesCols={filteredMesesCols} />
+            <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
             <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
-            <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={handleResetPeriod} />
+            <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
           </>
         )}
 
@@ -173,7 +154,7 @@ const Dashboard: React.FC = () => {
 
           {role === "admin" && (
             <TabsContent value="visao">
-              <VisaoGeral clientes={filtered} mesesCols={filteredMesesCols} />
+              <VisaoGeral clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
             </TabsContent>
           )}
 
@@ -188,7 +169,7 @@ const Dashboard: React.FC = () => {
             <ClienteTable clientes={filtered} onSelect={setSelectedCliente} />
           </TabsContent>
           <TabsContent value="heatmap">
-            <HeatmapTable clientes={filtered} mesesCols={filteredMesesCols} />
+            <HeatmapTable clientes={filtered} mesesCols={mesesCols} />
           </TabsContent>
           <TabsContent value="agenda">
             <AgendaVisitas clientes={filtered} />
