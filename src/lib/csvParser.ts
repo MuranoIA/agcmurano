@@ -211,13 +211,15 @@ export function processPedidos(
       cicloMedio = Math.round((totalDays / (uniqueVendaDates.length - 1)) * 10) / 10;
     }
 
-    // TM_Mes - based on 11 months before current month
-    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // TM_Mes - 11 months before fromDate's month (or current month if no period)
+    const refMonth = fromDate
+      ? new Date(fromDate.getFullYear(), fromDate.getMonth(), 1)
+      : new Date(today.getFullYear(), today.getMonth(), 1);
     let tmFat = 0;
     for (let i = 1; i <= 11; i++) {
-      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i, 1);
+      const d = new Date(refMonth.getFullYear(), refMonth.getMonth() - i, 1);
       const key = fmtMesCol(d);
-      tmFat += mesesMap[key] || 0;
+      tmFat += mesesMapFull[key] || 0;
     }
     const tmMes = tmFat / 11;
 
@@ -249,7 +251,7 @@ export function processPedidos(
       proximaAcao = `Visitar em ${diasParaAcao}d`;
     }
 
-    return {
+    return [{
       Codigo: codigo,
       Nome: nome,
       Vendedor: vendedor,
@@ -266,7 +268,10 @@ export function processPedidos(
       N_Pedidos: nPedidos,
       Fat_Total: fatTotal,
       Primeira_Compra: formatDateOnly(primeiraCompra),
-      Ultima_Compra: formatDateOnly(ultimaCompra),
+      Ultima_Compra: formatDateOnly(ultimaCompraRef),
+      Segmento: segmento,
+      meses: mesesMap,
+    }];
       Segmento: segmento,
       meses: mesesMap,
     };
