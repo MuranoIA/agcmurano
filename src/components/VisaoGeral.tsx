@@ -43,7 +43,9 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo }) => {
             <div className="grid grid-cols-2 gap-y-1 text-xs">
               <span className="text-muted-foreground">Clientes</span>
               <span className="text-right font-medium">{v.total}</span>
-              <span className="text-muted-foreground">Fat. Total</span>
+              <span className="text-muted-foreground">Positivados</span>
+              <span className="text-right font-medium text-primary">{v.positivados}</span>
+              <span className="text-muted-foreground">Fat. Período</span>
               <span className="text-right font-medium">{fmtBRL(v.fatTotal)}</span>
               <span className="text-muted-foreground">Ativos</span>
               <span className="text-right font-medium text-green-600">{v.ativos}</span>
