@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useMemo, useEffect } from "
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { fetchVendedoresFromDB } from "@/lib/supabaseService";
 
-export type Empresa = "Grandes Contas" | "Venus";
+export type Empresa = "Grandes Contas";
 
-export const EMPRESAS: Empresa[] = ["Grandes Contas", "Venus"];
+export const EMPRESAS: Empresa[] = ["Grandes Contas"];
 
 interface EmpresaState {
   empresa: Empresa;
@@ -30,7 +30,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [empresa, setEmpresaState] = useState<Empresa>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "Venus" || saved === "Grandes Contas") return saved;
+    if (saved === "Grandes Contas") return saved;
     return "Grandes Contas";
   });
 

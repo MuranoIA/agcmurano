@@ -24,11 +24,7 @@ const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
     reader.readAsText(file, "UTF-8");
   }, [loadCSV]);
 
-  // Different header background per empresa
-  const headerClass =
-    empresa === "Venus"
-      ? "sticky top-0 z-50 bg-[hsl(160_70%_22%)] text-primary-foreground shadow-md"
-      : "sticky top-0 z-50 bg-primary text-primary-foreground shadow-md";
+  const headerClass = "sticky top-0 z-50 bg-primary text-primary-foreground shadow-md";
 
   return (
     <header className={headerClass}>
