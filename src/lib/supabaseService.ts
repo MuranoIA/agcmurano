@@ -30,37 +30,28 @@ function normalizeVendedorCSV(v: string): string {
   return normalizeVendedor(v);
 }
 
-// Fetch active grandes_contas clients -> map(cod_cliente -> vendedor normalized)
-async function fetchGrandesContasMap(): Promise<Map<number, string>> {
-  const map = new Map<number, string>();
+export async function fetchVendedoresFromDB(_empresa: string): Promise<{ vendedores: string[]; vendedoresInterior: string[] }> {
+  const setGeral = new Set<string>();
+  const setInterior = new Set<string>();
   let from = 0;
   const pageSize = 1000;
   while (true) {
     const { data, error } = await externalSupabase
       .from("grandes_contas")
-      .select("cod_cliente, vendedor, ativo")
+      .select("vendedor, ativo")
       .eq("ativo", true)
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
     (data as any[]).forEach(r => {
-      if (r.vendedor) map.set(Number(r.cod_cliente), normalizeVendedor(r.vendedor));
+      const v = normalizeVendedor(r.vendedor);
+      if (!v) return;
+      if (v.toLowerCase().includes("interior")) setInterior.add(v);
+      else setGeral.add(v);
     });
     if (data.length < pageSize) break;
     from += pageSize;
   }
-  return map;
-}
-
-export async function fetchVendedoresFromDB(_empresa: string): Promise<{ vendedores: string[]; vendedoresInterior: string[] }> {
-  const gc = await fetchGrandesContasMap();
-  const setGeral = new Set<string>();
-  const setInterior = new Set<string>();
-  gc.forEach((vendNorm) => {
-    if (!vendNorm) return;
-    if (vendNorm.toLowerCase().includes("interior")) setInterior.add(vendNorm);
-    else setGeral.add(vendNorm);
-  });
   const sortFn = (a: string, b: string) => a.localeCompare(b, "pt-BR");
   return {
     vendedores: [...setGeral].sort(sortFn),
@@ -69,42 +60,32 @@ export async function fetchVendedoresFromDB(_empresa: string): Promise<{ vendedo
 }
 
 export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas"): Promise<Pedido[]> {
-  const gcMap = await fetchGrandesContasMap();
-  if (gcMap.size === 0) return [];
-  const codes = [...gcMap.keys()];
-
-  // Fetch faturamento_winthor in chunks of codes, paginating each chunk
+  // Read directly from the view vw_grandes_contas which already joins vendedor
   const allRows: any[] = [];
-  const chunkSize = 200;
-  for (let i = 0; i < codes.length; i += chunkSize) {
-    const chunk = codes.slice(i, i + chunkSize);
-    let from = 0;
-    const pageSize = 1000;
-    while (true) {
-      const { data, error } = await externalSupabase
-        .from("faturamento_winthor")
-        .select("pedido, codigo_cliente, cliente, valor, data_movimento, tipo")
-        .in("codigo_cliente", chunk)
-        .range(from, from + pageSize - 1);
-      if (error) throw error;
-      if (!data || data.length === 0) break;
-      allRows.push(...data);
-      if (data.length < pageSize) break;
-      from += pageSize;
-    }
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await externalSupabase
+      .from("vw_grandes_contas")
+      .select("id, pedido, cod_cliente, nome, vendedor, valor, data, tipo")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
   }
 
   return allRows.map(r => {
-    const cod = Number(r.codigo_cliente);
     const tipoRaw = String(r.tipo || "").toUpperCase();
     const tipo: "VENDA" | "DEV" = tipoRaw === "DEVOLUCAO" || tipoRaw === "DEV" ? "DEV" : "VENDA";
     return {
       pedido: String(r.pedido),
-      codCliente: String(cod),
-      nome: r.cliente,
-      vendedor: gcMap.get(cod) || "",
+      codCliente: String(r.cod_cliente),
+      nome: r.nome,
+      vendedor: normalizeVendedor(r.vendedor),
       valor: Number(r.valor) || 0,
-      data: new Date(r.data_movimento),
+      data: new Date(r.data),
       tipo,
     };
   });
