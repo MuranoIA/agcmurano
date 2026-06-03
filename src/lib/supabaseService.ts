@@ -30,20 +30,22 @@ function normalizeVendedorCSV(v: string): string {
   return normalizeVendedor(v);
 }
 
-export async function fetchVendedoresFromDB(_empresa: string): Promise<{ vendedores: string[]; vendedoresInterior: string[] }> {
+export async function fetchVendedoresFromDB(_empresa: string): Promise<{ vendedores: string[]; vendedoresInterior: string[]; regioes: string[] }> {
   const setGeral = new Set<string>();
   const setInterior = new Set<string>();
+  const setRegioes = new Set<string>();
   let from = 0;
   const pageSize = 1000;
   while (true) {
     const { data, error } = await externalSupabase
       .from("grandes_contas")
-      .select("vendedor, ativo")
+      .select("vendedor, ativo, regiao")
       .eq("ativo", true)
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
     (data as any[]).forEach(r => {
+      setRegioes.add(r.regiao || "capital");
       const v = normalizeVendedor(r.vendedor);
       if (!v) return;
       if (v.toLowerCase().includes("interior")) setInterior.add(v);
@@ -56,6 +58,7 @@ export async function fetchVendedoresFromDB(_empresa: string): Promise<{ vendedo
   return {
     vendedores: [...setGeral].sort(sortFn),
     vendedoresInterior: [...setInterior].sort(sortFn),
+    regioes: [...setRegioes].sort(),
   };
 }
 
@@ -67,7 +70,7 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
   while (true) {
     const { data, error } = await externalSupabase
       .from("vw_grandes_contas")
-      .select("id, pedido, cod_cliente, nome, vendedor, valor, data, tipo")
+      .select("id, pedido, cod_cliente, nome, vendedor, valor, data, tipo, regiao")
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
@@ -87,6 +90,7 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
       valor: Number(r.valor) || 0,
       data: new Date(r.data),
       tipo,
+      regiao: r.regiao || "capital",
     };
   });
 }

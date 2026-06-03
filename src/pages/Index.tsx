@@ -41,6 +41,7 @@ const Dashboard: React.FC = () => {
   const resetPeriod = appData?.resetPeriod ?? (() => {});
   const mesesNoPeriodo = appData?.mesesNoPeriodo ?? 1;
   const [vendedor, setVendedor] = useState("Todos");
+  const [regiao, setRegiao] = useState("Todos");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
@@ -68,6 +69,7 @@ const Dashboard: React.FC = () => {
 
   const filtered = useMemo(() => {
     let list = clientesCapital;
+    if (regiao !== "Todos") list = list.filter(c => c.Segmento === regiao.toLowerCase());
     if (vendedor !== "Todos") list = list.filter(c => c.Vendedor === vendedor);
     if (status !== "Todos") list = list.filter(c => c.Status === status);
     if (busca) {
@@ -75,7 +77,7 @@ const Dashboard: React.FC = () => {
       list = list.filter(c => c.Nome.toLowerCase().includes(term) || c.Codigo.includes(term));
     }
     return list;
-  }, [clientesCapital, vendedor, status, busca]);
+  }, [clientesCapital, regiao, vendedor, status, busca]);
 
   const filteredInterior = useMemo(() => {
     let list = clientesInterior;
@@ -131,7 +133,7 @@ const Dashboard: React.FC = () => {
         {activeTab !== "interior" && (
           <>
             <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
-            <Filters vendedor={vendedor} setVendedor={setVendedor} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
+            <Filters vendedor={vendedor} setVendedor={setVendedor} regiao={regiao} setRegiao={setRegiao} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
             <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
           </>
         )}

@@ -55,6 +55,7 @@ export interface Pedido {
   valor: number;
   data: Date;
   tipo: "VENDA" | "DEV";
+  regiao?: string;
 }
 
 export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string[] } {
@@ -147,7 +148,7 @@ export function processPedidos(
   const clientes: Cliente[] = Object.entries(groups).flatMap(([codigo, peds]) => {
     const nome = peds[0].nome;
     const vendedor = peds[0].vendedor;
-    const segmento = vendedor.toLowerCase().includes("interior") ? "interior" : "capital";
+    const segmento = peds[0].regiao || (vendedor.toLowerCase().includes("interior") ? "interior" : "capital");
 
     // Drop clients whose first purchase is after referenceDate (didn't exist yet)
     const allDates = peds.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());

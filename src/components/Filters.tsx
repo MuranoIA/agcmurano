@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button";
 interface Props {
   vendedor: string;
   setVendedor: (v: string) => void;
+  regiao: string;
+  setRegiao: (r: string) => void;
   status: string;
   setStatus: (v: string) => void;
   busca: string;
   setBusca: (v: string) => void;
 }
 
-const Filters: React.FC<Props> = ({ vendedor, setVendedor, status, setStatus, busca, setBusca }) => {
-  const { vendedores } = useEmpresa();
+const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, status, setStatus, busca, setBusca }) => {
+  const { vendedores, regioes } = useEmpresa();
   const { permissions } = usePermissions();
   const isVendedorRestrito = permissions?.role === "vendedor";
   const vendedorOpts = ["Todos", ...vendedores];
@@ -31,6 +33,14 @@ const Filters: React.FC<Props> = ({ vendedor, setVendedor, status, setStatus, bu
           ))}
         </div>
       )}
+      <div className="flex gap-1">
+        {["Todos", ...regioes].map(r => (
+          <Button key={r} size="sm" variant={regiao === r ? "default" : "outline"}
+            onClick={() => setRegiao(r)} className="text-xs">
+            {r === "capital" ? "Capital" : r === "vigia" ? "Vigia" : r}
+          </Button>
+        ))}
+      </div>
       <div className="flex gap-1">
         {statusOpts.map(s => (
           <Button key={s} size="sm" variant={status === s ? "default" : "outline"} onClick={() => setStatus(s)} className="text-xs">

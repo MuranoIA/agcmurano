@@ -11,6 +11,7 @@ interface EmpresaState {
   setEmpresa: (e: Empresa) => void;
   vendedores: string[];
   vendedoresInterior: string[];
+  regioes: string[];
   hasInterior: boolean;
   empresasPermitidas: Empresa[];
 }
@@ -36,6 +37,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [vendedores, setVendedores] = useState<string[]>([]);
   const [vendedoresInterior, setVendedoresInterior] = useState<string[]>([]);
+  const [regioes, setRegioes] = useState<string[]>([]);
 
   // Adjust selected empresa if not allowed
   useEffect(() => {
@@ -51,16 +53,18 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     let cancelled = false;
     fetchVendedoresFromDB(empresa)
-      .then(({ vendedores: v, vendedoresInterior: vi }) => {
+      .then(({ vendedores: v, vendedoresInterior: vi, regioes: rg }) => {
         if (cancelled) return;
         setVendedores(v);
         setVendedoresInterior(vi);
+        setRegioes(rg);
       })
       .catch(err => {
         console.error("Erro ao carregar vendedores:", err);
         if (!cancelled) {
           setVendedores([]);
           setVendedoresInterior([]);
+          setRegioes([]);
         }
       });
     return () => { cancelled = true; };
@@ -77,10 +81,11 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setEmpresa,
     vendedores,
     vendedoresInterior,
+    regioes,
     hasInterior: vendedoresInterior.length > 0,
     empresasPermitidas,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [empresa, empresasPermitidas, vendedores, vendedoresInterior]);
+  }), [empresa, empresasPermitidas, vendedores, vendedoresInterior, regioes]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
