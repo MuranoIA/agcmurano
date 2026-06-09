@@ -10,8 +10,8 @@ import Filters from "@/components/Filters";
 import PeriodFilter from "@/components/PeriodFilter";
 import ClienteTable from "@/components/ClienteTable";
 import HeatmapTable from "@/components/HeatmapTable";
-import AgendaVisitas from "@/components/AgendaVisitas";
-import RegistroVisitas from "@/components/RegistroVisitas";
+import AgendaVisitasV2 from "@/components/AgendaVisitasV2";
+import RelatorioVisitas from "@/components/RelatorioVisitas";
 import RankingTable from "@/components/RankingTable";
 import VisaoGeral from "@/components/VisaoGeral";
 import ClientePanel from "@/components/ClientePanel";
@@ -146,7 +146,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="heatmap">Heatmap Mensal</TabsTrigger>
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
-              <TabsTrigger value="registro">Registro de Visitas</TabsTrigger>
+              {!isVendedorRestrito && <TabsTrigger value="registro">Relatório de Visitas</TabsTrigger>}
               {hasInterior && <TabsTrigger value="interior">Interior</TabsTrigger>}
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
@@ -174,14 +174,16 @@ const Dashboard: React.FC = () => {
             <HeatmapTable clientes={filtered} mesesCols={mesesCols} />
           </TabsContent>
           <TabsContent value="agenda">
-            <AgendaVisitas clientes={filtered} />
+            <AgendaVisitasV2 />
           </TabsContent>
           <TabsContent value="ranking">
             <RankingTable clientes={filtered} />
           </TabsContent>
-          <TabsContent value="registro">
-            <RegistroVisitas />
-          </TabsContent>
+          {!isVendedorRestrito && (
+            <TabsContent value="registro">
+              <RelatorioVisitas />
+            </TabsContent>
+          )}
           <TabsContent value="interior">
             <div className="space-y-4">
               {/* KPIs Interior */}
