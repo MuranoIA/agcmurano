@@ -51,8 +51,15 @@ const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, on
       </div>
 
       <button onClick={onDetalhes} className="block text-left w-full mt-1">
-        <div className="font-medium truncate" title={nome}>
-          {nome} <span className="text-muted-foreground">({visita.cod_cliente})</span>
+        <div className="font-medium truncate flex items-center gap-1" title={nome}>
+          <span className="truncate">{nome}</span>
+          {visita.prospeccao ? (
+            <span className="shrink-0 text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+              FORA DO AGC
+            </span>
+          ) : (
+            <span className="text-muted-foreground">({visita.cod_cliente})</span>
+          )}
         </div>
         {typeof diasSemCompra === "number" && diasSemCompra > 0 && (
           <div className="text-muted-foreground">{diasSemCompra}d sem compra</div>

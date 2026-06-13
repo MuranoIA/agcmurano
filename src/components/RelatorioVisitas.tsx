@@ -58,6 +58,7 @@ const RelatorioVisitas: React.FC = () => {
 
   const navMes = (delta: number) => setRef(new Date(ref.getFullYear(), ref.getMonth() + delta, 1));
   const nomeDe = (cod: number) => nomes[cod] || `Cliente ${cod}`;
+  const nomeVisita = (v: AgendaVisita) => (v.prospeccao && v.nome_prospeccao ? v.nome_prospeccao : nomeDe(v.cod_cliente));
 
   const vendedoresList = useMemo(
     () => [...new Set(agenda.map(v => v.vendedor))].sort((a, b) => a.localeCompare(b, "pt-BR")),
@@ -120,7 +121,7 @@ const RelatorioVisitas: React.FC = () => {
   const exportar = () => {
     const headers = ["Data", "Cliente", "Cod", "Vendedor", "Status", "Vendeu", "Valor", "Resultado", "Observacao"];
     const rows = filtrada.map(v => [
-      fmtDataBR(v.data_visita), nomeDe(v.cod_cliente), String(v.cod_cliente), capitalize(v.vendedor),
+      fmtDataBR(v.data_visita), nomeVisita(v), v.prospeccao ? "PROSPECÇÃO" : String(v.cod_cliente), capitalize(v.vendedor),
       STATUS_LABEL[v.status], v.vendeu ? "Sim" : "Não", v.vendeu ? String(v.valor_venda) : "",
       v.resultado || "", v.observacao || "",
     ]);
@@ -225,7 +226,14 @@ const RelatorioVisitas: React.FC = () => {
                 {filtrada.map(v => (
                   <tr key={v.id} className="border-b last:border-0 hover:bg-muted/20">
                     <td className="px-3 py-2 whitespace-nowrap">{fmtDataBR(v.data_visita)}</td>
-                    <td className="px-3 py-2">{nomeDe(v.cod_cliente)} <span className="text-muted-foreground">({v.cod_cliente})</span></td>
+                    <td className="px-3 py-2">
+                      {nomeVisita(v)}{" "}
+                      {v.prospeccao ? (
+                        <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full align-middle">PROSPECÇÃO</span>
+                      ) : (
+                        <span className="text-muted-foreground">({v.cod_cliente})</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2">{capitalize(v.vendedor)}</td>
                     <td className="px-3 py-2">{STATUS_LABEL[v.status]}</td>
                     <td className="px-3 py-2 text-center">{v.status === "realizada" ? (v.vendeu ? "✅" : "—") : ""}</td>

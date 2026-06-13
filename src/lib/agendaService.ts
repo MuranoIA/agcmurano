@@ -22,6 +22,8 @@ export interface AgendaVisita {
   motivo_prioridade: string | null;
   mes_referencia: string; // YYYY-MM
   gerado_automaticamente: boolean;
+  prospeccao?: boolean; // visita fora do AGC (cliente não é grande conta)
+  nome_prospeccao?: string; // nome digitado do cliente de prospecção
   criado_em?: string;
   atualizado_em?: string;
 }
@@ -42,8 +44,8 @@ export interface InteligenciaCliente {
 }
 
 // Limites de visitas por dia
-export const VISITAS_OBRIGATORIAS = 4;
-export const VISITAS_MAX = 6;
+export const VISITAS_OBRIGATORIAS = 4; // mínimo gerado automaticamente
+export const VISITAS_MAX = 12; // máximo por dia (inclui adições manuais)
 
 const ORDEM_PRIORIDADE: Record<Prioridade, number> = {
   urgente: 0,
@@ -109,10 +111,11 @@ export function getDiasUteis(mesRef: string): string[] {
 
 // ---- LEITURA ----
 
-/** Inteligência por cliente (vw_inteligencia_agenda). Opcionalmente filtra por vendedor. */
-export async function fetchInteligencia(vendedor?: string): Promise<InteligenciaCliente[]> {
+/** Inteligência por cliente (vw_inteligencia_agenda). Opcionalmente filtra por vendedor e região. */
+export async function fetchInteligencia(vendedor?: string, regiao?: string): Promise<InteligenciaCliente[]> {
   let q = externalSupabase.from("vw_inteligencia_agenda").select("*");
   if (vendedor) q = q.eq("vendedor", vendedor);
+  if (regiao) q = q.eq("regiao", regiao);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as InteligenciaCliente[];
@@ -191,12 +194,15 @@ interface NovaVisitaManual {
   ordem: number;
   prioridade?: Prioridade;
   motivo_prioridade?: string | null;
+  prospeccao?: boolean;
+  nome_prospeccao?: string;
 }
 
 /** Adiciona uma visita manual (não gerada automaticamente). */
 export async function addVisitaManual(v: NovaVisitaManual): Promise<AgendaVisita> {
+  const prospeccao = v.prospeccao === true;
   const row = {
-    cod_cliente: v.cod_cliente,
+    cod_cliente: prospeccao ? 0 : v.cod_cliente,
     vendedor: v.vendedor,
     data_visita: v.data_visita,
     turno: v.ordem <= 2 ? "manha" : "tarde",
@@ -206,6 +212,8 @@ export async function addVisitaManual(v: NovaVisitaManual): Promise<AgendaVisita
     motivo_prioridade: v.motivo_prioridade ?? null,
     mes_referencia: v.data_visita.slice(0, 7),
     gerado_automaticamente: false,
+    prospeccao,
+    nome_prospeccao: prospeccao ? (v.nome_prospeccao ?? null) : null,
   };
   const { data, error } = await externalSupabase
     .from("agenda_gc")
@@ -222,8 +230,8 @@ export async function addVisitaManual(v: NovaVisitaManual): Promise<AgendaVisita
  * Remove a agenda gerada automaticamente anterior do mês antes de inserir.
  */
 export async function gerarAgendaMes(vendedor: string, mesRef: string): Promise<number> {
-  // 1. Buscar clientes do vendedor com inteligência
-  const clientes = await fetchInteligencia(vendedor);
+  // 1. Buscar clientes do vendedor com inteligência (somente região Capital)
+  const clientes = await fetchInteligencia(vendedor, "capital");
   if (clientes.length === 0) return 0;
 
   // 2. Ordenar por prioridade (urgente primeiro)

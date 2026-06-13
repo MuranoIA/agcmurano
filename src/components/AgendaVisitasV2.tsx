@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Sparkles, Plus, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -92,7 +93,7 @@ const AgendaVisitasV2: React.FC = () => {
       // meses visíveis (a semana pode cruzar a virada de mês)
       const mesesVisiveis = [...new Set(dias.map(d => mesRefDe(d)))];
       const [intel, ...agendas] = await Promise.all([
-        fetchInteligencia(vendedorAtivo),
+        fetchInteligencia(vendedorAtivo, "capital"),
         ...mesesVisiveis.map(m => fetchAgenda(m, vendedorAtivo)),
       ]);
       setInteligencia(intel);
@@ -218,7 +219,7 @@ const AgendaVisitasV2: React.FC = () => {
                     {DIAS_SEMANA[dia.getDay()]} {String(dia.getDate()).padStart(2, "0")}
                   </span>
                   <span className={`text-[10px] ${incompleto ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
-                    {ativas}/{VISITAS_OBRIGATORIAS}
+                    {ativas}/{VISITAS_MAX}
                   </span>
                 </div>
                 <div className="space-y-2 flex-1">
@@ -226,7 +227,7 @@ const AgendaVisitasV2: React.FC = () => {
                     <VisitaCard
                       key={v.id}
                       visita={v}
-                      nome={nomeDe(v.cod_cliente)}
+                      nome={v.prospeccao && v.nome_prospeccao ? v.nome_prospeccao : nomeDe(v.cod_cliente)}
                       diasSemCompra={diasSemCompraMap[v.cod_cliente]}
                       editable={editable}
                       onRealizar={() => setRealizarVisita(v)}
@@ -253,7 +254,7 @@ const AgendaVisitasV2: React.FC = () => {
         open={!!realizarVisita}
         onOpenChange={o => !o && setRealizarVisita(null)}
         visita={realizarVisita}
-        nome={realizarVisita ? nomeDe(realizarVisita.cod_cliente) : ""}
+        nome={realizarVisita ? (realizarVisita.prospeccao && realizarVisita.nome_prospeccao ? realizarVisita.nome_prospeccao : nomeDe(realizarVisita.cod_cliente)) : ""}
         onSaved={loadData}
       />
 
@@ -287,6 +288,8 @@ interface AddProps {
 const AddVisitaDialog: React.FC<AddProps> = ({ open, onOpenChange, dia, vendedor, inteligencia, agenda, onAdded }) => {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<InteligenciaCliente | null>(null);
+  const [prospeccao, setProspeccao] = useState(false);
+  const [nomeProspeccao, setNomeProspeccao] = useState("");
   const [saving, setSaving] = useState(false);
 
   const suggestions = useMemo(() => {
@@ -298,18 +301,21 @@ const AddVisitaDialog: React.FC<AddProps> = ({ open, onOpenChange, dia, vendedor
   }, [search, inteligencia]);
 
   const salvar = async () => {
-    if (!selected) { toast.error("Selecione um cliente"); return; }
+    if (prospeccao && !nomeProspeccao.trim()) { toast.error("Informe o nome do cliente"); return; }
+    if (!prospeccao && !selected) { toast.error("Selecione um cliente"); return; }
     const countNoDia = agenda.filter(v => v.data_visita === dia && v.status !== "cancelada").length;
     if (countNoDia >= VISITAS_MAX) { toast.error(`Máximo de ${VISITAS_MAX} visitas por dia`); return; }
     setSaving(true);
     try {
       await addVisitaManual({
-        cod_cliente: selected.cod_cliente,
+        cod_cliente: prospeccao ? 0 : selected!.cod_cliente,
         vendedor,
         data_visita: dia,
         ordem: countNoDia + 1,
-        prioridade: selected.prioridade_sugerida,
-        motivo_prioridade: selected.motivo_prioridade,
+        prioridade: prospeccao ? "normal" : selected!.prioridade_sugerida,
+        motivo_prioridade: prospeccao ? null : selected!.motivo_prioridade,
+        prospeccao,
+        nome_prospeccao: prospeccao ? nomeProspeccao.trim() : undefined,
       });
       toast.success("Visita adicionada");
       onAdded();
@@ -338,31 +344,51 @@ const AddVisitaDialog: React.FC<AddProps> = ({ open, onOpenChange, dia, vendedor
           <DialogTitle>Adicionar visita — {diaFmt}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="relative">
-            <Label>Cliente</Label>
-            <Input
-              placeholder="Buscar nome ou código"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setSelected(null); }}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <Checkbox
+              checked={prospeccao}
+              onCheckedChange={c => { setProspeccao(c === true); setSelected(null); }}
             />
-            {suggestions.length > 0 && !selected && (
-              <div className="absolute z-30 mt-1 w-full bg-card border rounded shadow-lg max-h-52 overflow-y-auto">
-                {suggestions.map(c => (
-                  <div
-                    key={c.cod_cliente}
-                    className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
-                    onClick={() => { setSelected(c); setSearch(`${c.nome} (${c.cod_cliente})`); }}
-                  >
-                    {c.cod_cliente} — {c.nome}
-                    <span className="text-xs text-muted-foreground ml-1">· {c.dias_sem_compra}d sem compra</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            <span className="text-sm font-medium">Cliente fora do AGC (prospecção)</span>
+          </label>
+
+          {prospeccao ? (
+            <div>
+              <Label>Nome do cliente</Label>
+              <Input
+                placeholder="Digite o nome do cliente"
+                value={nomeProspeccao}
+                onChange={e => setNomeProspeccao(e.target.value)}
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div className="relative">
+              <Label>Cliente</Label>
+              <Input
+                placeholder="Buscar nome ou código"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setSelected(null); }}
+              />
+              {suggestions.length > 0 && !selected && (
+                <div className="absolute z-30 mt-1 w-full bg-card border rounded shadow-lg max-h-52 overflow-y-auto">
+                  {suggestions.map(c => (
+                    <div
+                      key={c.cod_cliente}
+                      className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                      onClick={() => { setSelected(c); setSearch(`${c.nome} (${c.cod_cliente})`); }}
+                    >
+                      {c.cod_cliente} — {c.nome}
+                      <span className="text-xs text-muted-foreground ml-1">· {c.dias_sem_compra}d sem compra</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
-            <Button onClick={salvar} disabled={saving || !selected}>
+            <Button onClick={salvar} disabled={saving || (prospeccao ? !nomeProspeccao.trim() : !selected)}>
               {saving && <Loader2 size={14} className="mr-1 animate-spin" />}
               Adicionar
             </Button>
