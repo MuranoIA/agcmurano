@@ -35,24 +35,23 @@ export interface InteligenciaCliente {
   nome: string;
   dt_ultima_compra: string | null;
   dias_sem_compra: number;
-  meses_ativos: number;
-  fat_total: number;
   ciclo_medio: number;
-  status_cliente: "ativo" | "risco" | "inativo";
+  frequencia_3m: number;
+  total_pedidos: number;
+  ticket_medio: number;
+  tm_mensal: number;
+  objetivo: number;
+  fat_mes_atual: number;
+  score_rfm: number;
+  visitas_mes_sugeridas: number;
+  status_cliente: string;
   prioridade_sugerida: Prioridade;
-  motivo_prioridade: string | null;
+  motivo_prioridade: string;
 }
 
 // Limites de visitas por dia
 export const VISITAS_OBRIGATORIAS = 4; // mínimo gerado automaticamente
 export const VISITAS_MAX = 12; // máximo por dia (inclui adições manuais)
-
-const ORDEM_PRIORIDADE: Record<Prioridade, number> = {
-  urgente: 0,
-  alta: 1,
-  normal: 2,
-  baixa: 3,
-};
 
 /** Extrai mensagem legível de um erro desconhecido. */
 export const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -225,68 +224,143 @@ export async function addVisitaManual(v: NovaVisitaManual): Promise<AgendaVisita
 }
 
 /**
- * Gera a agenda do mês para um vendedor, distribuindo clientes por prioridade
- * (urgente → alta → normal → baixa), 4 visitas por dia útil (terça a sexta).
- * Remove a agenda gerada automaticamente anterior do mês antes de inserir.
+ * Gera a agenda do mês para um vendedor usando lógica RFM.
+ *
+ * Cada cliente é repetido conforme `visitas_mes_sugeridas` (1 a 4, baseado no
+ * ciclo de compra) e distribuído nos dias úteis (terça a sexta) de HOJE em
+ * diante, com espaçamento mínimo entre visitas do mesmo cliente e ordenação por
+ * score RFM (maior primeiro). Todos os dias futuros são preenchidos com até 4
+ * visitas obrigatórias, sem dias vazios.
+ *
+ * Preserva o histórico: nunca gera, deleta ou modifica visitas de datas passadas.
  */
 export async function gerarAgendaMes(vendedor: string, mesRef: string): Promise<number> {
-  // 1. Buscar clientes do vendedor com inteligência (somente região Capital)
+  // 1. Buscar clientes com inteligência RFM (somente região Capital)
   const clientes = await fetchInteligencia(vendedor, "capital");
-  if (clientes.length === 0) return 0;
+  if (!clientes.length) return 0;
 
-  // 2. Ordenar por prioridade (urgente primeiro)
-  clientes.sort(
-    (a, b) =>
-      (ORDEM_PRIORIDADE[a.prioridade_sugerida] ?? 9) -
-      (ORDEM_PRIORIDADE[b.prioridade_sugerida] ?? 9),
-  );
+  // 2. Dias úteis do mês (ter-sex), APENAS de hoje pra frente
+  const hoje = toISODate(new Date()); // data local
+  const diasUteis = getDiasUteis(mesRef).filter(d => d >= hoje); // só futuros
+  if (!diasUteis.length) return 0;
 
-  // 3. Dias úteis do mês (terça a sexta)
-  const diasUteis = getDiasUteis(mesRef);
-  if (diasUteis.length === 0) return 0;
+  const VISITAS_DIA = VISITAS_OBRIGATORIAS; // 4 obrigatórias por dia
 
-  // 4. Distribuir 4 clientes por dia
-  const agenda: Omit<AgendaVisita, "id">[] = [];
-  let diaIdx = 0;
-  let ordemNoDia = 1;
+  // 3. Expandir clientes conforme visitas_mes_sugeridas
+  interface VisitaSlot {
+    cod_cliente: number;
+    score_rfm: number;
+    prioridade: Prioridade;
+    motivo: string;
+    visitaNum: number; // 1ª, 2ª, 3ª ou 4ª visita do mês
+  }
 
-  for (const cliente of clientes) {
-    if (diaIdx >= diasUteis.length) break;
-    agenda.push({
-      cod_cliente: cliente.cod_cliente,
-      vendedor,
-      data_visita: diasUteis[diaIdx],
-      turno: ordemNoDia <= 2 ? "manha" : "tarde",
-      ordem: ordemNoDia,
-      status: "agendada",
-      vendeu: false,
-      valor_venda: 0,
-      observacao: null,
-      resultado: null,
-      prioridade: cliente.prioridade_sugerida ?? "normal",
-      motivo_prioridade: cliente.motivo_prioridade,
-      mes_referencia: mesRef,
-      gerado_automaticamente: true,
-    });
-    ordemNoDia++;
-    if (ordemNoDia > VISITAS_OBRIGATORIAS) {
-      ordemNoDia = 1;
-      diaIdx++;
+  const slots: VisitaSlot[] = [];
+  for (const cli of clientes) {
+    const nVisitas = Math.min(Math.max(cli.visitas_mes_sugeridas || 1, 1), 4); // 1 a 4
+    for (let i = 1; i <= nVisitas; i++) {
+      slots.push({
+        cod_cliente: cli.cod_cliente,
+        score_rfm: cli.score_rfm,
+        prioridade: cli.prioridade_sugerida ?? "normal",
+        motivo: cli.motivo_prioridade,
+        visitaNum: i,
+      });
     }
   }
 
-  // 5. Deletar agenda gerada automaticamente anterior do mês
+  // 4. Ordenar: 1ª visita de todos antes de 2ª; dentro de cada, maior score RFM primeiro
+  slots.sort((a, b) => {
+    if (a.visitaNum !== b.visitaNum) return a.visitaNum - b.visitaNum;
+    return b.score_rfm - a.score_rfm;
+  });
+
+  // 5. Distribuir nos dias com espaçamento mínimo entre visitas do mesmo cliente
+  const agenda: Array<{
+    cod_cliente: number;
+    data_visita: string;
+    turno: Turno;
+    ordem: number;
+    prioridade: Prioridade;
+    motivo_prioridade: string;
+  }> = [];
+
+  const ultimoDia: Record<number, number> = {}; // cod_cliente → índice do último dia agendado
+  const visitasPorDia: Record<number, number> = {}; // índice do dia → contagem
+
+  for (const slot of slots) {
+    let melhorDia = -1;
+
+    for (let d = 0; d < diasUteis.length; d++) {
+      if ((visitasPorDia[d] || 0) >= VISITAS_DIA) continue; // dia cheio
+
+      if (ultimoDia[slot.cod_cliente] !== undefined) {
+        const distancia = d - ultimoDia[slot.cod_cliente];
+        const espacMin = slot.visitaNum <= 2 ? 3 : 2; // 3 dias entre visitas, 2 pra frequentes
+        if (distancia < espacMin) continue;
+      }
+
+      melhorDia = d;
+      break;
+    }
+
+    // Relaxa o espaçamento: qualquer dia com espaço, desde que não seja o mesmo dia
+    if (melhorDia === -1) {
+      for (let d = 0; d < diasUteis.length; d++) {
+        if ((visitasPorDia[d] || 0) >= VISITAS_DIA) continue;
+        if (ultimoDia[slot.cod_cliente] === d) continue; // nunca 2x no mesmo dia
+        melhorDia = d;
+        break;
+      }
+    }
+
+    if (melhorDia === -1) break; // todos os dias cheios
+
+    const ordemNoDia = (visitasPorDia[melhorDia] || 0) + 1;
+    agenda.push({
+      cod_cliente: slot.cod_cliente,
+      data_visita: diasUteis[melhorDia],
+      turno: ordemNoDia <= 2 ? "manha" : "tarde",
+      ordem: ordemNoDia,
+      prioridade: slot.prioridade,
+      motivo_prioridade: slot.motivo,
+    });
+
+    visitasPorDia[melhorDia] = ordemNoDia;
+    ultimoDia[slot.cod_cliente] = melhorDia;
+  }
+
+  // 6. Deletar agenda auto-gerada anterior do mês, APENAS de hoje pra frente
+  //    (histórico de datas passadas é preservado)
   const { error: delError } = await externalSupabase
     .from("agenda_gc")
     .delete()
     .eq("vendedor", vendedor)
     .eq("mes_referencia", mesRef)
-    .eq("gerado_automaticamente", true);
+    .eq("gerado_automaticamente", true)
+    .gte("data_visita", hoje);
   if (delError) throw delError;
 
-  // 6. Inserir nova agenda
-  const { error: insError } = await externalSupabase.from("agenda_gc").insert(agenda);
-  if (insError) throw insError;
+  // 7. Inserir nova agenda em batches de 50
+  if (agenda.length > 0) {
+    const rows = agenda.map(a => ({
+      ...a,
+      vendedor,
+      status: "agendada" as StatusVisita,
+      vendeu: false,
+      valor_venda: 0,
+      observacao: null,
+      resultado: null,
+      mes_referencia: mesRef,
+      gerado_automaticamente: true,
+    }));
+
+    for (let i = 0; i < rows.length; i += 50) {
+      const batch = rows.slice(i, i + 50);
+      const { error: insError } = await externalSupabase.from("agenda_gc").insert(batch);
+      if (insError) throw insError;
+    }
+  }
 
   return agenda.length;
 }
