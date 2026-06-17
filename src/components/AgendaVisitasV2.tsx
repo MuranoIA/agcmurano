@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Sparkles, Plus, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Plus, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import VisitaCard from "./VisitaCard";
 import ModalRealizarVisita from "./ModalRealizarVisita";
@@ -17,7 +17,7 @@ import {
   fetchInteligencia,
   fetchVendedoresAgenda,
   gerarAgendaMes,
-  excluirAgendaMes,
+  deleteVisita,
   moveVisita,
   addVisitaManual,
   errMsg,
@@ -46,7 +46,6 @@ const AgendaVisitasV2: React.FC = () => {
   const [inteligencia, setInteligencia] = useState<InteligenciaCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [gerando, setGerando] = useState(false);
-  const [excluindo, setExcluindo] = useState(false);
 
   const [realizarVisita, setRealizarVisita] = useState<AgendaVisita | null>(null);
   const [addDia, setAddDia] = useState<string | null>(null);
@@ -126,23 +125,6 @@ const AgendaVisitasV2: React.FC = () => {
     }
   };
 
-  const handleExcluir = async () => {
-    if (!vendedorAtivo) return;
-    const label = `${MESES[terca.getMonth()]}/${terca.getFullYear()}`;
-    if (!confirm(`Excluir toda a agenda de ${capitalize(vendedorAtivo)} para ${label}?\n\nIsso remove TODAS as visitas (automáticas e manuais) de hoje em diante. Visitas passadas são preservadas. Esta ação não pode ser desfeita.`)) return;
-    setExcluindo(true);
-    try {
-      const n = await excluirAgendaMes(vendedorAtivo, mesRefAtual);
-      if (n === 0) toast.info("Nenhuma visita futura para excluir");
-      else toast.success(`${n} visitas excluídas de ${label}`);
-      await loadData();
-    } catch (err) {
-      toast.error("Erro ao excluir agenda: " + errMsg(err));
-    } finally {
-      setExcluindo(false);
-    }
-  };
-
   // Drag & drop
   const handleDrop = async (diaISO: string) => {
     const id = dragId.current;
@@ -204,20 +186,9 @@ const AgendaVisitasV2: React.FC = () => {
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </Button>
           {editable && (
-            <Button size="sm" onClick={handleGerar} disabled={gerando || excluindo}>
+            <Button size="sm" onClick={handleGerar} disabled={gerando}>
               {gerando ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Sparkles size={14} className="mr-1" />}
               Gerar Agenda do Mês
-            </Button>
-          )}
-          {editable && isGestor && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={handleExcluir}
-              disabled={excluindo || gerando}
-            >
-              {excluindo ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Trash2 size={14} className="mr-1" />}
-              Excluir Agenda
             </Button>
           )}
         </div>
@@ -263,6 +234,15 @@ const AgendaVisitasV2: React.FC = () => {
                       onRealizar={() => setRealizarVisita(v)}
                       onDetalhes={() => setRealizarVisita(v)}
                       onDragStart={() => { dragId.current = v.id; }}
+                      onDelete={editable ? async () => {
+                        try {
+                          await deleteVisita(v.id);
+                          setAgenda(prev => prev.filter(x => x.id !== v.id));
+                          toast.success("Visita excluída");
+                        } catch (err) {
+                          toast.error("Erro ao excluir: " + errMsg(err));
+                        }
+                      } : undefined}
                     />
                   ))}
                 </div>

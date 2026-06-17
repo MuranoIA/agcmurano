@@ -1,7 +1,7 @@
 import React from "react";
 import { AgendaVisita, Prioridade, StatusVisita } from "@/lib/agendaService";
 import { fmtBRL } from "@/lib/format";
-import { CheckCircle2, MessageSquare, GripVertical } from "lucide-react";
+import { CheckCircle2, MessageSquare, GripVertical, Trash2 } from "lucide-react";
 
 interface Props {
   visita: AgendaVisita;
@@ -11,6 +11,7 @@ interface Props {
   onRealizar: () => void;
   onDetalhes: () => void;
   onDragStart?: (e: React.DragEvent) => void;
+  onDelete?: () => void;
 }
 
 const PRIORIDADE_CONFIG: Record<Prioridade, { dot: string; border: string; label: string }> = {
@@ -27,7 +28,7 @@ const STATUS_CONFIG: Record<StatusVisita, { bg: string; label: string; icon?: st
   cancelada: { bg: "bg-muted opacity-70", label: "Cancelada", icon: "✖️" },
 };
 
-const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, onRealizar, onDetalhes, onDragStart }) => {
+const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, onRealizar, onDetalhes, onDragStart, onDelete }) => {
   const prio = PRIORIDADE_CONFIG[visita.prioridade] ?? PRIORIDADE_CONFIG.normal;
   const st = STATUS_CONFIG[visita.status] ?? STATUS_CONFIG.agendada;
   const cancelada = visita.status === "cancelada";
@@ -101,6 +102,15 @@ const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, on
           >
             <MessageSquare size={12} />
           </button>
+          {onDelete && (
+            <button
+              onClick={e => { e.stopPropagation(); if (confirm(`Excluir visita de ${nome}?`)) onDelete(); }}
+              className="inline-flex items-center justify-center rounded border px-2 py-1 text-red-400 hover:bg-red-100 hover:text-red-600"
+              title="Excluir visita"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
       )}
 
