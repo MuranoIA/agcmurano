@@ -233,6 +233,17 @@ const RelatorioVisitas: React.FC = () => {
                       ) : (
                         <span className="text-muted-foreground">({v.cod_cliente})</span>
                       )}
+                      {v.latitude != null && v.longitude != null && (
+                        <a
+                          href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Ver localização registrada no Google Maps"
+                          className="ml-1 align-middle hover:opacity-70"
+                        >
+                          📍
+                        </a>
+                      )}
                     </td>
                     <td className="px-3 py-2">{capitalize(v.vendedor)}</td>
                     <td className="px-3 py-2">{STATUS_LABEL[v.status]}</td>

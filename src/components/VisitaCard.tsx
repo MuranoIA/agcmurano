@@ -76,6 +76,16 @@ const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, on
         )}
       </div>
 
+      {realizada && visita.vendeu && (
+        <div className="mt-1">
+          {visita.venda_confirmada ? (
+            <span className="text-[10px] font-medium text-green-700 dark:text-green-400">✅ Confirmada</span>
+          ) : (
+            <span className="text-[10px] font-medium text-amber-600">⏳ Pendente confirmação</span>
+          )}
+        </div>
+      )}
+
       {editable && !cancelada && !realizada && (
         <div className="flex gap-1 mt-1.5">
           <button

@@ -24,6 +24,13 @@ export interface AgendaVisita {
   gerado_automaticamente: boolean;
   prospeccao?: boolean; // visita fora do AGC (cliente não é grande conta)
   nome_prospeccao?: string; // nome digitado do cliente de prospecção
+  // localização GPS registrada no momento da realização da visita (opcional)
+  latitude?: number | null;
+  longitude?: number | null;
+  endereco_registro?: string | null;
+  // confirmação automática da venda contra o faturamento (Edge Function diária)
+  venda_confirmada?: boolean;
+  venda_confirmada_em?: string | null;
   criado_em?: string;
   atualizado_em?: string;
 }
@@ -186,6 +193,24 @@ export async function deleteVisita(id: number): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Exclui toda a agenda de um vendedor no mês (auto-geradas E manuais), APENAS de
+ * hoje pra frente. Nunca toca em visitas de datas passadas (preserva histórico).
+ * Retorna a quantidade de visitas excluídas.
+ */
+export async function excluirAgendaMes(vendedor: string, mesRef: string): Promise<number> {
+  const hoje = toISODate(new Date());
+  const { data, error } = await externalSupabase
+    .from("agenda_gc")
+    .delete()
+    .eq("vendedor", vendedor)
+    .eq("mes_referencia", mesRef)
+    .gte("data_visita", hoje)
+    .select("id");
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
 interface NovaVisitaManual {
   cod_cliente: number;
   vendedor: string;
@@ -343,6 +368,8 @@ export async function gerarAgendaMes(vendedor: string, mesRef: string): Promise<
 
   // 7. Inserir nova agenda em batches de 50
   if (agenda.length > 0) {
+    // Toda visita nova começa ZERADA — nunca herda status/valor de visitas
+    // anteriores do mesmo cliente.
     const rows = agenda.map(a => ({
       ...a,
       vendedor,
@@ -351,6 +378,13 @@ export async function gerarAgendaMes(vendedor: string, mesRef: string): Promise<
       valor_venda: 0,
       observacao: null,
       resultado: null,
+      prospeccao: false,
+      nome_prospeccao: null,
+      venda_confirmada: false,
+      venda_confirmada_em: null,
+      latitude: null,
+      longitude: null,
+      endereco_registro: null,
       mes_referencia: mesRef,
       gerado_automaticamente: true,
     }));

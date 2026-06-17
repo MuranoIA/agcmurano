@@ -25,6 +25,20 @@ const RESULTADOS = [
   { value: "outro", label: "Outro" },
 ] as const;
 
+/** Pede a localização do navegador. Resolve null se indisponível ou negada (nunca rejeita). */
+async function getLocation(): Promise<{ lat: number; lng: number } | null> {
+  if (!navigator.geolocation) return null;
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null), // se negar permissão, segue sem
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  });
+}
+
+type GeoStatus = "idle" | "capturando" | "ok" | "off";
+
 const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome, onSaved }) => {
   const [vendeu, setVendeu] = useState(false);
   const [valor, setValor] = useState("");
@@ -32,6 +46,7 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
   const [resultado, setResultado] = useState<string>("venda");
   const [novaData, setNovaData] = useState("");
   const [saving, setSaving] = useState(false);
+  const [geo, setGeo] = useState<GeoStatus>("idle");
 
   useEffect(() => {
     if (open && visita) {
@@ -40,6 +55,7 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
       setObs(visita.observacao ?? "");
       setResultado(visita.resultado || "venda");
       setNovaData(visita.data_visita);
+      setGeo("idle");
     }
   }, [open, visita]);
 
@@ -67,12 +83,18 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
         });
         toast.success("Visita reagendada");
       } else {
+        // Localização é OPCIONAL: se o vendedor negar/não houver suporte, salva sem.
+        setGeo("capturando");
+        const loc = await getLocation();
+        setGeo(loc ? "ok" : "off");
         await updateVisita(visita.id, {
           status: "realizada",
           vendeu,
           valor_venda: valorNum,
           observacao: obs || null,
           resultado,
+          latitude: loc?.lat ?? null,
+          longitude: loc?.lng ?? null,
         });
         toast.success("Visita registrada!");
       }
@@ -150,6 +172,14 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
             <Label htmlFor="obs">Observação</Label>
             <Textarea id="obs" rows={3} value={obs} onChange={e => setObs(e.target.value)} placeholder="Anotações da visita..." />
           </div>
+
+          {!isReagendar && geo !== "idle" && (
+            <p className="text-xs text-muted-foreground">
+              {geo === "capturando" && "Obtendo localização…"}
+              {geo === "ok" && "📍 Localização registrada"}
+              {geo === "off" && "Localização não registrada (segue normalmente)"}
+            </p>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
