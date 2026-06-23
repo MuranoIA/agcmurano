@@ -16,6 +16,8 @@ import RankingTable from "@/components/RankingTable";
 import VisaoGeral from "@/components/VisaoGeral";
 import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
+import PendenciasAGC from "@/components/PendenciasAGC";
+import { countAlertasPendentes } from "@/lib/alertasService";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
@@ -26,9 +28,10 @@ import { Input } from "@/components/ui/input";
 
 const Dashboard: React.FC = () => {
   const appData = useAppData();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { permissions } = usePermissions();
   const isVendedorRestrito = permissions?.role === "vendedor";
+  const isGestor = permissions?.role === "gestor" || role === "admin";
   const { hasInterior, vendedoresInterior } = useEmpresa();
   const clientes = appData?.clientes ?? [];
   const mesesCols = appData?.mesesCols ?? [];
@@ -47,6 +50,19 @@ const Dashboard: React.FC = () => {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [showNovoCliente, setShowNovoCliente] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(role === "admin" ? "visao" : "clientes");
+  const [pendenciasCount, setPendenciasCount] = useState(0);
+
+  // Contagem de pendências (badge) — só pra gestores, atualiza a cada 60s
+  useEffect(() => {
+    if (!isGestor) return;
+    let cancelled = false;
+    const refresh = () => {
+      countAlertasPendentes().then(n => { if (!cancelled) setPendenciasCount(n); });
+    };
+    refresh();
+    const interval = setInterval(refresh, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [isGestor]);
 
   // Reset filters/tab when empresa changes (avoid stuck state on hidden tab or invalid vendor)
   useEffect(() => {
@@ -147,6 +163,16 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
               {!isVendedorRestrito && <TabsTrigger value="registro">Relatório de Visitas</TabsTrigger>}
+              {isGestor && (
+                <TabsTrigger value="pendencias">
+                  Pendências
+                  {pendenciasCount > 0 && (
+                    <span className="ml-1.5 text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full leading-none">
+                      {pendenciasCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
               {hasInterior && <TabsTrigger value="interior">Interior</TabsTrigger>}
             </TabsList>
             <Button variant="outline" size="sm" onClick={exportAll}>
@@ -182,6 +208,15 @@ const Dashboard: React.FC = () => {
           {!isVendedorRestrito && (
             <TabsContent value="registro">
               <RelatorioVisitas />
+            </TabsContent>
+          )}
+          {isGestor && (
+            <TabsContent value="pendencias">
+              <PendenciasAGC
+                isGestor={isGestor}
+                usuario={user?.email ?? permissions?.nome ?? "gestor"}
+                onPendenciasChange={setPendenciasCount}
+              />
             </TabsContent>
           )}
           <TabsContent value="interior">
