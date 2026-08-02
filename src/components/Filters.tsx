@@ -13,9 +13,11 @@ interface Props {
   setStatus: (v: string) => void;
   busca: string;
   setBusca: (v: string) => void;
+  somenteVendasProprias: boolean;
+  setSomenteVendasProprias: (v: boolean) => void;
 }
 
-const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, status, setStatus, busca, setBusca }) => {
+const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, status, setStatus, busca, setBusca, somenteVendasProprias, setSomenteVendasProprias }) => {
   const { vendedores, regioes } = useEmpresa();
   const { permissions } = usePermissions();
   const isVendedorRestrito = permissions?.role === "vendedor";
@@ -54,6 +56,14 @@ const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, st
         onChange={e => setBusca(e.target.value)}
         className="max-w-xs text-sm"
       />
+      <Button
+        size="sm"
+        variant={somenteVendasProprias ? "default" : "outline"}
+        onClick={() => setSomenteVendasProprias(!somenteVendasProprias)}
+        className={`text-xs ml-auto ${somenteVendasProprias ? "bg-green-600 hover:bg-green-700" : ""}`}
+      >
+        {somenteVendasProprias ? "✅ Vendas próprias" : "📊 Todas as vendas"}
+      </Button>
     </div>
   );
 };

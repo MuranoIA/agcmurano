@@ -56,6 +56,7 @@ export interface Pedido {
   data: Date;
   tipo: "VENDA" | "DEV";
   regiao?: string;
+  venda_propria?: boolean;
 }
 
 export function parseCSV(text: string): { clientes: Cliente[]; mesesCols: string[] } {

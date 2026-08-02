@@ -34,6 +34,8 @@ interface AppState {
   setPeriodTo: (d: Date | undefined) => void;
   resetPeriod: () => void;
   mesesNoPeriodo: number;
+  somenteVendasProprias: boolean;
+  setSomenteVendasProprias: (v: boolean) => void;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
@@ -78,6 +80,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => defaultPeriod().from);
   const [periodTo, setPeriodTo] = useState<Date | undefined>(() => defaultPeriod().to);
+  const [somenteVendasProprias, setSomenteVendasProprias] = useState(false);
   const resetPeriod = useCallback(() => {
     const d = defaultPeriod();
     setPeriodFrom(d.from);
@@ -215,13 +218,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [csvLoaded, rawClientes, refreshData]);
 
-  // Recompute period-scoped clientes when rawPedidos or period changes
+  // Recompute period-scoped clientes when rawPedidos, period or vendas-próprias filter changes
   const periodClientes = useMemo(() => {
     if (dataFromPedidos && rawPedidos.length > 0) {
-      return processPedidos(rawPedidos, { from: periodFrom, to: periodTo }).clientes;
+      const pedidos = somenteVendasProprias
+        ? rawPedidos.filter(p => p.venda_propria === true)
+        : rawPedidos;
+      return processPedidos(pedidos, { from: periodFrom, to: periodTo }).clientes;
     }
     return rawClientes;
-  }, [dataFromPedidos, rawPedidos, periodFrom, periodTo, rawClientes]);
+  }, [dataFromPedidos, rawPedidos, periodFrom, periodTo, rawClientes, somenteVendasProprias]);
 
   const clientes = useMemo(() => {
     let list = applyOverlay(periodClientes, overlay, dataFromPedidos);
@@ -264,6 +270,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setPeriodTo,
       resetPeriod,
       mesesNoPeriodo,
+      somenteVendasProprias,
+      setSomenteVendasProprias,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,

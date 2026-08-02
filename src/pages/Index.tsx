@@ -43,6 +43,8 @@ const Dashboard: React.FC = () => {
   const setPeriodTo = appData?.setPeriodTo ?? (() => {});
   const resetPeriod = appData?.resetPeriod ?? (() => {});
   const mesesNoPeriodo = appData?.mesesNoPeriodo ?? 1;
+  const somenteVendasProprias = appData?.somenteVendasProprias ?? false;
+  const setSomenteVendasProprias = appData?.setSomenteVendasProprias ?? (() => {});
   const [vendedor, setVendedor] = useState("Todos");
   const [regiao, setRegiao] = useState("Todos");
   const [status, setStatus] = useState("Todos");
@@ -148,8 +150,14 @@ const Dashboard: React.FC = () => {
       <div className="container px-4 py-4">
         {activeTab !== "interior" && (
           <>
+            {somenteVendasProprias && (
+              <div className="mb-3 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 text-xs text-green-700 flex items-center gap-2">
+                <span>✅ Exibindo apenas vendas próprias do vendedor</span>
+                <button onClick={() => setSomenteVendasProprias(false)} className="underline">Mostrar todas</button>
+              </div>
+            )}
             <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
-            <Filters vendedor={vendedor} setVendedor={setVendedor} regiao={regiao} setRegiao={setRegiao} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} />
+            <Filters vendedor={vendedor} setVendedor={setVendedor} regiao={regiao} setRegiao={setRegiao} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} somenteVendasProprias={somenteVendasProprias} setSomenteVendasProprias={setSomenteVendasProprias} />
             <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
           </>
         )}
