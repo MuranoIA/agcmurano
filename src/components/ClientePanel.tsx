@@ -147,7 +147,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="bg-card w-full max-w-5xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl sm:rounded-xl"
+        className="bg-card w-full max-w-3xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl sm:rounded-xl"
         onClick={e => e.stopPropagation()}
       >
         {/* ============ SEÇÃO 1: HEADER (fixo) ============ */}
@@ -204,9 +204,9 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 p-4 sm:p-6">
-          {/* ============ SEÇÃO 2: RANKING GERAL (largura total) ============ */}
-          <div className="md:col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="p-4 sm:p-6 space-y-6">
+          {/* ============ SEÇÃO 2: RANKING GERAL ============ */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {carregando ? (
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 size={14} className="animate-spin" /> Carregando dados do cliente…
@@ -239,107 +239,102 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
             </div>
           </div>
 
-          {/* ============ COLUNA ESQUERDA ============ */}
-          <div className="space-y-5 min-w-0">
-            {/* SEÇÃO 3: KPIs compactos */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {kpis.map(k => (
-                <div key={k.label} className="bg-muted/50 rounded-lg px-2 py-1.5 text-center">
-                  <p className="text-[10px] text-muted-foreground leading-tight">{k.label}</p>
-                  <p className={`text-sm font-bold truncate ${k.cls || ""}`} title={k.value}>{k.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {insights.length > 0 && (
-              <Secao titulo="Interpretação">
-                <div className="space-y-0.5">
-                  {insights.map((ins, i) => (
-                    <div key={i} className="text-xs">{ins}</div>
-                  ))}
-                </div>
-              </Secao>
-            )}
-
-            {/* SEÇÃO 4: Vendedor responsável */}
-            {rca1 && (
-              <Secao titulo="Vendedor Responsável">
-                <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
-                  <div className="h-10 w-10 shrink-0 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-                    {iniciais(rca1.nome)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{rca1.nome}</p>
-                    <p className="text-xs text-muted-foreground">RCA {rca1.codigo}</p>
-                  </div>
-                  {rca2 && (
-                    <div className="ml-auto text-right min-w-0">
-                      <p className="text-xs text-muted-foreground">2º Vendedor</p>
-                      <p className="text-sm truncate">{rca2.nome}</p>
-                      <p className="text-[10px] text-muted-foreground">RCA {rca2.codigo}</p>
-                    </div>
-                  )}
-                </div>
-              </Secao>
-            )}
-
-            {/* SEÇÃO 5: Endereço */}
-            {temEndereco && (
-              <Secao titulo="Endereço">
-                <div className="grid grid-cols-2 gap-2 text-sm bg-muted/30 rounded-lg p-3">
-                  <div className="col-span-2"><strong>Logradouro:</strong> {cad?.endereco || "—"}</div>
-                  <div><strong>Bairro:</strong> {cad?.bairro || "—"}</div>
-                  <div><strong>Cidade:</strong> {cad?.cidade || "—"}{cad?.estado ? ` - ${cad.estado}` : ""}</div>
-                  <div><strong>CEP:</strong> {fmtCEP(cad?.cep)}</div>
-                </div>
-              </Secao>
-            )}
-
-            {/* SEÇÕES 7 e 8: Rankings */}
-            {!carregando && (
-              <>
-                <ClienteRankings titulo="Ranking por Departamento" linhas={topDepartamentos} medida="valor" />
-                <ClienteRankings titulo="Ranking de Produtos" linhas={topProdutos} medida="qtd" mostrarCodigo />
-              </>
-            )}
+          {/* ============ SEÇÃO 3: KPIs compactos ============ */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {kpis.map(k => (
+              <div key={k.label} className="bg-muted/50 rounded-lg px-2 py-1.5 text-center">
+                <p className="text-[10px] text-muted-foreground leading-tight">{k.label}</p>
+                <p className={`text-sm font-bold truncate ${k.cls || ""}`} title={k.value}>{k.value}</p>
+              </div>
+            ))}
           </div>
 
-          {/* ============ COLUNA DIREITA ============ */}
-          <div className="space-y-5 min-w-0">
-            {/* SEÇÃO 6: Faturamento mensal */}
-            <Secao titulo="Faturamento Mensal">
-              <div className="grid grid-cols-4 gap-1">
-                {mesesCols.map(m => {
-                  const val = c.meses[m] || 0;
-                  const { bg, fg } = heatmapColor(val, c.TM_Mes);
-                  return (
-                    <div key={m} className="rounded p-1.5 text-center text-[11px]" style={{ backgroundColor: bg, color: fg }}>
-                      <div className="font-medium">{m}</div>
-                      <div>{val > 0 ? fmtBRLShort(val) : "—"}</div>
-                    </div>
-                  );
-                })}
+          {/* ============ INTERPRETAÇÃO ============ */}
+          {insights.length > 0 && (
+            <Secao titulo="Interpretação">
+              <div className="space-y-0.5">
+                {insights.map((ins, i) => (
+                  <div key={i} className="text-xs">{ins}</div>
+                ))}
               </div>
             </Secao>
+          )}
 
-            {/* SEÇÃO 9: Últimos pedidos */}
-            {!carregando && <ClientePedidos codCliente={codCliente} pedidos={pedidos} />}
-
-            {/* SEÇÃO 10: Histórico de visitas */}
-            {clienteVisitas.length > 0 && (
-              <Secao titulo="Histórico de Visitas">
-                <div className="space-y-2">
-                  {clienteVisitas.map((v, i) => (
-                    <div key={i} className="text-sm bg-muted/30 rounded p-2">
-                      <span className="font-medium">{v.data} {v.hora}</span> — {v.vendedor}
-                      {v.teve_venda && " ✅ venda"}
-                      {v.observacao && <div className="text-xs text-muted-foreground mt-1">{v.observacao}</div>}
-                    </div>
-                  ))}
+          {/* ============ SEÇÃO 4: VENDEDOR RESPONSÁVEL ============ */}
+          {rca1 && (
+            <Secao titulo="Vendedor Responsável">
+              <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                  {iniciais(rca1.nome)}
                 </div>
-              </Secao>
-            )}
-          </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{rca1.nome}</p>
+                  <p className="text-xs text-muted-foreground">RCA {rca1.codigo}</p>
+                </div>
+                {rca2 && (
+                  <div className="ml-auto text-right min-w-0">
+                    <p className="text-xs text-muted-foreground">2º Vendedor</p>
+                    <p className="text-sm truncate">{rca2.nome}</p>
+                    <p className="text-[10px] text-muted-foreground">RCA {rca2.codigo}</p>
+                  </div>
+                )}
+              </div>
+            </Secao>
+          )}
+
+          {/* ============ SEÇÃO 5: ENDEREÇO ============ */}
+          {temEndereco && (
+            <Secao titulo="Endereço">
+              <div className="grid grid-cols-2 gap-2 text-sm bg-muted/30 rounded-lg p-3">
+                <div className="col-span-2"><strong>Logradouro:</strong> {cad?.endereco || "—"}</div>
+                <div><strong>Bairro:</strong> {cad?.bairro || "—"}</div>
+                <div><strong>Cidade:</strong> {cad?.cidade || "—"}{cad?.estado ? ` - ${cad.estado}` : ""}</div>
+                <div><strong>CEP:</strong> {fmtCEP(cad?.cep)}</div>
+              </div>
+            </Secao>
+          )}
+
+          {/* ============ SEÇÃO 6: FATURAMENTO MENSAL ============ */}
+          <Secao titulo="Faturamento Mensal">
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
+              {mesesCols.map(m => {
+                const val = c.meses[m] || 0;
+                const { bg, fg } = heatmapColor(val, c.TM_Mes);
+                return (
+                  <div key={m} className="rounded p-1.5 text-center text-[11px]" style={{ backgroundColor: bg, color: fg }}>
+                    <div className="font-medium">{m}</div>
+                    <div>{val > 0 ? fmtBRLShort(val) : "—"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Secao>
+
+          {/* ============ SEÇÕES 7 e 8: RANKINGS ============ */}
+          {!carregando && (
+            <>
+              <ClienteRankings titulo="Ranking por Departamento" linhas={topDepartamentos} medida="valor" />
+              <ClienteRankings titulo="Ranking de Produtos" linhas={topProdutos} medida="qtd" mostrarCodigo />
+            </>
+          )}
+
+          {/* ============ SEÇÃO 9: ÚLTIMOS PEDIDOS ============ */}
+          {!carregando && <ClientePedidos codCliente={codCliente} pedidos={pedidos} />}
+
+          {/* ============ SEÇÃO 10: HISTÓRICO DE VISITAS ============ */}
+          {clienteVisitas.length > 0 && (
+            <Secao titulo="Histórico de Visitas">
+              <div className="space-y-2">
+                {clienteVisitas.map((v, i) => (
+                  <div key={i} className="text-sm bg-muted/30 rounded p-2">
+                    <span className="font-medium">{v.data} {v.hora}</span> — {v.vendedor}
+                    {v.teve_venda && " ✅ venda"}
+                    {v.observacao && <div className="text-xs text-muted-foreground mt-1">{v.observacao}</div>}
+                  </div>
+                ))}
+              </div>
+            </Secao>
+          )}
         </div>
       </div>
     </div>
