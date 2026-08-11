@@ -30,6 +30,23 @@ const fmtDataBR = (iso: string) => {
   return `${String(d.getDate()).padStart(2, "0")}/${MESES[d.getMonth()]}`;
 };
 
+/** Rótulo da validação GPS do check-in. */
+const gpsTexto = (v: AgendaVisita): string => {
+  if (v.dentro_do_raio == null || v.distancia_metros == null) return "—";
+  const m = `${Number(v.distancia_metros).toFixed(0)}m`;
+  return v.dentro_do_raio ? `✅ ${m}` : `⚠️ ${m} (fora)`;
+};
+
+const gpsCell = (v: AgendaVisita) => {
+  if (v.dentro_do_raio == null || v.distancia_metros == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const m = `${Number(v.distancia_metros).toFixed(0)}m`;
+  return v.dentro_do_raio
+    ? <span className="text-green-600">✅ {m}</span>
+    : <span className="text-red-600">⚠️ {m} (fora)</span>;
+};
+
 const RelatorioVisitas: React.FC = () => {
   const [ref, setRef] = useState<Date>(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [agenda, setAgenda] = useState<AgendaVisita[]>([]);
@@ -119,11 +136,11 @@ const RelatorioVisitas: React.FC = () => {
   ), [resumo]);
 
   const exportar = () => {
-    const headers = ["Data", "Cliente", "Cod", "Vendedor", "Status", "Vendeu", "Valor", "Resultado", "Observacao"];
+    const headers = ["Data", "Cliente", "Cod", "Vendedor", "Status", "Vendeu", "Valor", "GPS", "Resultado", "Observacao"];
     const rows = filtrada.map(v => [
       fmtDataBR(v.data_visita), nomeVisita(v), v.prospeccao ? "PROSPECÇÃO" : String(v.cod_cliente), capitalize(v.vendedor),
       STATUS_LABEL[v.status], v.vendeu ? "Sim" : "Não", v.vendeu ? String(v.valor_venda) : "",
-      v.resultado || "", v.observacao || "",
+      gpsTexto(v), v.resultado || "", v.observacao || "",
     ]);
     downloadFile(exportCSV(headers, rows), `relatorio_visitas_${mesRef}.csv`);
   };
@@ -219,6 +236,7 @@ const RelatorioVisitas: React.FC = () => {
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2 text-center">Vendeu</th>
                   <th className="px-3 py-2 text-right">Valor</th>
+                  <th className="px-3 py-2 text-center">GPS</th>
                   <th className="px-3 py-2">Observação</th>
                 </tr>
               </thead>
@@ -249,11 +267,12 @@ const RelatorioVisitas: React.FC = () => {
                     <td className="px-3 py-2">{STATUS_LABEL[v.status]}</td>
                     <td className="px-3 py-2 text-center">{v.status === "realizada" ? (v.vendeu ? "✅" : "—") : ""}</td>
                     <td className="px-3 py-2 text-right">{v.vendeu && v.valor_venda > 0 ? fmtBRL(v.valor_venda) : "—"}</td>
+                    <td className="px-3 py-2 text-center whitespace-nowrap text-xs">{gpsCell(v)}</td>
                     <td className="px-3 py-2 text-xs max-w-[220px] truncate" title={v.observacao || ""}>{v.observacao || "—"}</td>
                   </tr>
                 ))}
                 {filtrada.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma visita</td></tr>
+                  <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma visita</td></tr>
                 )}
               </tbody>
             </table>

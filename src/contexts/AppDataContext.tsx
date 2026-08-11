@@ -17,6 +17,7 @@ import {
   fetchClientesRCA,
   ClienteRCAInfo,
 } from "@/lib/supabaseService";
+import { fetchClientesComLocalizacao } from "@/lib/localizacaoService";
 import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +31,9 @@ interface AppState {
   overlay: OverlayStore;
   visitas: (Visita & { id?: string })[];
   rcaInfo: Record<string, ClienteRCAInfo>;
+  /** cod_cliente dos clientes que já têm lat/lng cadastrados */
+  clientesComLocalizacao: Set<number>;
+  refreshLocalizacoes: () => Promise<void>;
   loading: boolean;
   periodFrom: Date | undefined;
   periodTo: Date | undefined;
@@ -85,7 +89,16 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
   const [rcaInfo, setRcaInfo] = useState<Record<string, ClienteRCAInfo>>({});
+  const [clientesComLocalizacao, setClientesComLocalizacao] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
+
+  const refreshLocalizacoes = useCallback(async () => {
+    try {
+      setClientesComLocalizacao(await fetchClientesComLocalizacao());
+    } catch (err) {
+      console.error("Erro ao carregar localizações dos clientes:", err);
+    }
+  }, []);
 
   const defaultPeriod = () => {
     const now = new Date();
@@ -106,13 +119,17 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const refreshData = useCallback(async () => {
     try {
-      const [pedidosResult, overlayResult, visitasResult, rcaResult] = await Promise.all([
+      const [pedidosResult, overlayResult, visitasResult, rcaResult, locResult] = await Promise.all([
         fetchPedidosFromDB(empresa),
         fetchFullOverlay(),
         fetchOverlayVisitas(),
         fetchClientesRCA().catch(err => {
           console.error("Erro ao carregar RCAs dos clientes:", err);
           return {} as Record<string, ClienteRCAInfo>;
+        }),
+        fetchClientesComLocalizacao().catch(err => {
+          console.error("Erro ao carregar localizações dos clientes:", err);
+          return new Set<number>();
         }),
       ]);
       if (pedidosResult.clientes.length > 0) {
@@ -139,6 +156,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setOverlay(overlayResult);
       setVisitas(visitasResult);
       setRcaInfo(rcaResult);
+      setClientesComLocalizacao(locResult);
     } catch (err) {
       console.error("Error refreshing data:", err);
     } finally {
@@ -287,6 +305,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       overlay,
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
       rcaInfo,
+      clientesComLocalizacao,
+      refreshLocalizacoes,
       loading,
       periodFrom,
       periodTo,

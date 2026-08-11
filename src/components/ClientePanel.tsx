@@ -16,6 +16,7 @@ import {
   rankingDepartamentos,
   rankingProdutos,
 } from "@/lib/clienteDetalheService";
+import { linkMaps } from "@/lib/localizacaoService";
 
 interface Props {
   cliente: Cliente;
@@ -139,7 +140,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
   const clienteVisitas = visitas.filter(v => v.codigo === c.Codigo);
 
   const familia = cad?.familia?.trim().toUpperCase();
-  const temEndereco = !!(cad?.endereco || cad?.bairro || cad?.cidade || cad?.cep);
+  const temEndereco = !!(cad?.endereco || cad?.bairro || cad?.cidade || cad?.cep || cad?.lat_cliente != null);
 
   return (
     <div
@@ -290,6 +291,20 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
                 <div><strong>Bairro:</strong> {cad?.bairro || "—"}</div>
                 <div><strong>Cidade:</strong> {cad?.cidade || "—"}{cad?.estado ? ` - ${cad.estado}` : ""}</div>
                 <div><strong>CEP:</strong> {fmtCEP(cad?.cep)}</div>
+                <div className="col-span-2">
+                  {cad?.lat_cliente != null && cad?.lng_cliente != null ? (
+                    <a
+                      href={linkMaps(cad.lat_cliente, cad.lng_cliente)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 underline"
+                    >
+                      📍 Ver no Google Maps
+                    </a>
+                  ) : (
+                    <span className="text-xs text-amber-600">📍 Localização não cadastrada</span>
+                  )}
+                </div>
               </div>
             </Secao>
           )}

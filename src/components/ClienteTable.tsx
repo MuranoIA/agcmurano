@@ -15,7 +15,7 @@ interface Props {
 type SortKey = keyof Cliente | "lastMonth";
 
 const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
-  const { mesesCols, setVendedor, rcaInfo } = useAppData();
+  const { mesesCols, setVendedor, rcaInfo, clientesComLocalizacao } = useAppData();
   const { vendedores } = useEmpresa();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
@@ -78,6 +78,14 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
                 <span className="flex items-center gap-1 min-w-0">
                   <span className="truncate">{c.Nome}</span>
                   <TagRCA2 info={rcaInfo[c.Codigo]} />
+                  {!clientesComLocalizacao.has(Number(c.Codigo)) && (
+                    <span
+                      className="shrink-0 text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full"
+                      title="Cliente ainda sem coordenadas — o vendedor pode cadastrar ao registrar uma visita"
+                    >
+                      📍 Sem localização
+                    </span>
+                  )}
                 </span>
               </td>
               <td className="px-3 py-2" onClick={e => e.stopPropagation()}>

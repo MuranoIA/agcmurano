@@ -18,6 +18,8 @@ export interface ClienteCadastro {
   ramo: string | null;
   familia: string | null;
   ativo: boolean | null;
+  lat_cliente: number | null;
+  lng_cliente: number | null;
 }
 
 export interface RankingCliente {
@@ -71,10 +73,17 @@ export async function fetchClienteCompleto(codCliente: number): Promise<ClienteD
   const [cliente, ranking, itens, pedidos] = await Promise.all([
     externalSupabase
       .from("clientes")
-      .select("codcli, cliente, cpf_cnpj, endereco, bairro, cidade, estado, cep, telefone, email, rca_vendedor, rca2_vendedor, ramo, familia, ativo")
+      .select("codcli, cliente, cpf_cnpj, endereco, bairro, cidade, estado, cep, telefone, email, rca_vendedor, rca2_vendedor, ramo, familia, ativo, lat_cliente, lng_cliente")
       .eq("codcli", codCliente)
       .maybeSingle()
-      .then(({ data }) => (data as ClienteCadastro) ?? null)
+      .then(({ data }) => {
+        if (!data) return null;
+        return {
+          ...data,
+          lat_cliente: data.lat_cliente == null ? null : num(data.lat_cliente),
+          lng_cliente: data.lng_cliente == null ? null : num(data.lng_cliente),
+        } as ClienteCadastro;
+      })
       .catch(() => null),
 
     externalSupabase

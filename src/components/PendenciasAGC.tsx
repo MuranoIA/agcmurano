@@ -23,6 +23,16 @@ import {
   removerAlerta,
   errMsg,
 } from "@/lib/alertasService";
+import {
+  AprovacaoLocalizacao,
+  aprovarMudanca,
+  calcularDistancia,
+  errMsgLoc,
+  fetchAprovacoesPendentes,
+  linkMaps,
+  rejeitarMudanca,
+} from "@/lib/localizacaoService";
+import { externalSupabase } from "@/integrations/supabase/externalClient";
 
 interface Props {
   isGestor: boolean;
@@ -98,6 +108,9 @@ const csvEscape = (v: unknown): string => {
 const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange }) => {
   const [alertas, setAlertas] = useState<AlertaAGC[]>([]);
   const [rejeitados, setRejeitados] = useState<ClienteRejeitadoNoRCA[]>([]);
+  const [aprovacoesLoc, setAprovacoesLoc] = useState<AprovacaoLocalizacao[]>([]);
+  const [nomesLoc, setNomesLoc] = useState<Record<number, string>>({});
+  const [locActionId, setLocActionId] = useState<number | null>(null);
   const [historico, setHistorico] = useState<HistoricoAGC[]>([]);
   const [total, setTotal] = useState(0);
   const [vendedores, setVendedores] = useState<string[]>([]);
@@ -134,6 +147,24 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
     }
   }, [buildFiltros]);
 
+  const loadAprovacoesLoc = useCallback(async () => {
+    try {
+      const aps = await fetchAprovacoesPendentes();
+      setAprovacoesLoc(aps);
+      if (aps.length > 0) {
+        const { data } = await externalSupabase
+          .from("clientes")
+          .select("codcli, cliente")
+          .in("codcli", [...new Set(aps.map(a => a.cod_cliente))]);
+        const map: Record<number, string> = {};
+        (data || []).forEach(c => { map[c.codcli] = c.cliente; });
+        setNomesLoc(map);
+      }
+    } catch (err) {
+      toast.error("Erro ao carregar mudanças de localização: " + errMsgLoc(err));
+    }
+  }, []);
+
   const loadAlertas = useCallback(async () => {
     setLoading(true);
     try {
@@ -141,12 +172,40 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
       setAlertas(a);
       setRejeitados(r);
       onPendenciasChange?.(a.length);
+      loadAprovacoesLoc();
     } catch (err) {
       toast.error("Erro ao carregar alertas: " + errMsg(err));
     } finally {
       setLoading(false);
     }
-  }, [onPendenciasChange]);
+  }, [onPendenciasChange, loadAprovacoesLoc]);
+
+  const handleAprovarLoc = async (ap: AprovacaoLocalizacao) => {
+    setLocActionId(ap.id);
+    try {
+      await aprovarMudanca(ap.id, ap.cod_cliente, ap.lat_proposta, ap.lng_proposta, usuario);
+      toast.success("Localização atualizada.");
+      await loadAprovacoesLoc();
+    } catch (err) {
+      toast.error("Erro ao aprovar: " + errMsgLoc(err));
+    } finally {
+      setLocActionId(null);
+    }
+  };
+
+  const handleRejeitarLoc = async (ap: AprovacaoLocalizacao) => {
+    const motivo = window.prompt("Motivo da rejeição (opcional):") ?? "";
+    setLocActionId(ap.id);
+    try {
+      await rejeitarMudanca(ap.id, usuario, motivo);
+      toast.success("Solicitação rejeitada.");
+      await loadAprovacoesLoc();
+    } catch (err) {
+      toast.error("Erro ao rejeitar: " + errMsgLoc(err));
+    } finally {
+      setLocActionId(null);
+    }
+  };
 
   // Carga inicial
   useEffect(() => {
@@ -326,6 +385,78 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
             </div>
           )}
         </div>
+
+        {/* Seção A2: Mudanças de localização */}
+        {aprovacoesLoc.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold text-primary">
+              📍 Mudanças de Localização ({aprovacoesLoc.length})
+            </h4>
+            {aprovacoesLoc.map(ap => {
+              const temAnterior = ap.lat_anterior != null && ap.lng_anterior != null;
+              const deslocamento = temAnterior
+                ? calcularDistancia(ap.lat_anterior!, ap.lng_anterior!, ap.lat_proposta, ap.lng_proposta)
+                : null;
+              return (
+                <div key={ap.id} className="border border-blue-200 rounded-lg p-3 bg-blue-50">
+                  <p className="text-sm font-semibold">
+                    {nomesLoc[ap.cod_cliente] || `Cliente ${ap.cod_cliente}`}{" "}
+                    <span className="text-muted-foreground font-normal">({ap.cod_cliente})</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Solicitado por {capitalize(ap.solicitado_por)} — {fmtDataHora(ap.solicitado_em)}
+                  </p>
+                  {deslocamento != null && (
+                    <p className="text-xs text-muted-foreground">
+                      Deslocamento: {deslocamento.toFixed(0)}m da posição anterior
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <a
+                      href={linkMaps(ap.lat_proposta, ap.lng_proposta)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 underline"
+                    >
+                      📍 Nova localização
+                    </a>
+                    {temAnterior && (
+                      <a
+                        href={linkMaps(ap.lat_anterior!, ap.lng_anterior!)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-muted-foreground underline"
+                      >
+                        📍 Anterior
+                      </a>
+                    )}
+                    {isGestor && (
+                      <div className="flex gap-2 ml-auto">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+                          disabled={locActionId === ap.id}
+                          onClick={() => handleAprovarLoc(ap)}
+                        >
+                          {locActionId === ap.id ? <Loader2 size={12} className="animate-spin" /> : "✅ Aprovar"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-xs"
+                          disabled={locActionId === ap.id}
+                          onClick={() => handleRejeitarLoc(ap)}
+                        >
+                          ❌ Rejeitar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Seção B: Clientes rejeitados ainda no RCA */}
         <div>

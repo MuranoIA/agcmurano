@@ -77,6 +77,20 @@ const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, on
         )}
       </div>
 
+      {realizada && (visita.dentro_do_raio === true || visita.dentro_do_raio === false) && (
+        <div className="mt-1">
+          {visita.dentro_do_raio === true ? (
+            <span className="text-[10px] text-green-600" title={`Check-in validado dentro do raio`}>
+              ✅ {Number(visita.distancia_metros ?? 0).toFixed(0)}m
+            </span>
+          ) : (
+            <span className="text-[10px] text-red-600" title="Check-in fora do raio de validação">
+              ⚠️ {Number(visita.distancia_metros ?? 0).toFixed(0)}m (fora)
+            </span>
+          )}
+        </div>
+      )}
+
       {realizada && visita.vendeu && (
         <div className="mt-1">
           {visita.venda_confirmada ? (

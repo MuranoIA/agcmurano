@@ -28,6 +28,9 @@ export interface AgendaVisita {
   latitude?: number | null;
   longitude?: number | null;
   endereco_registro?: string | null;
+  // validação do check-in contra a localização cadastrada do cliente
+  distancia_metros?: number | null;
+  dentro_do_raio?: boolean | null;
   // confirmação automática da venda contra o faturamento (Edge Function diária)
   venda_confirmada?: boolean;
   venda_confirmada_em?: string | null;
@@ -385,6 +388,8 @@ export async function gerarAgendaMes(vendedor: string, mesRef: string): Promise<
       latitude: null,
       longitude: null,
       endereco_registro: null,
+      distancia_metros: null,
+      dentro_do_raio: null,
       mes_referencia: mesRef,
       gerado_automaticamente: true,
     }));
