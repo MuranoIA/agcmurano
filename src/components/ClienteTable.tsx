@@ -83,9 +83,6 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
                   <span className="flex items-center gap-1 min-w-0">
                     <span className="truncate text-sm">{c.Nome}</span>
                     <TagRCA2 info={rcaInfo[c.Codigo]} />
-                    {temLocalizacao(c.Codigo) && (
-                      <span className="shrink-0 text-[9px] text-green-600" title="Localização cadastrada">📍</span>
-                    )}
                   </span>
                   {!temLocalizacao(c.Codigo) && (
                     <div>
