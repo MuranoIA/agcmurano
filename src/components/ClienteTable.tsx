@@ -4,6 +4,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
+import TagRCA2 from "./TagRCA2";
 import { ArrowUpDown } from "lucide-react";
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 type SortKey = keyof Cliente | "lastMonth";
 
 const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
-  const { mesesCols, setVendedor } = useAppData();
+  const { mesesCols, setVendedor, rcaInfo } = useAppData();
   const { vendedores } = useEmpresa();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
@@ -73,7 +74,12 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
           {sorted.map((c, i) => (
             <tr key={c.Codigo} className={`cursor-pointer hover:bg-muted/30 ${i % 2 ? "bg-muted/10" : ""}`} onClick={() => onSelect(c)}>
               <td className="px-3 py-2 font-mono text-xs">{c.Codigo}</td>
-              <td className="px-3 py-2 font-medium truncate max-w-[200px]">{c.Nome}</td>
+              <td className="px-3 py-2 font-medium max-w-[200px]">
+                <span className="flex items-center gap-1 min-w-0">
+                  <span className="truncate">{c.Nome}</span>
+                  <TagRCA2 info={rcaInfo[c.Codigo]} />
+                </span>
+              </td>
               <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                 {c.Vendedor ? (
                   <span className="text-sm">{c.Vendedor}</span>

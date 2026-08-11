@@ -96,6 +96,80 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
   });
 }
 
+// ---- RCA1 / RCA2 POR CLIENTE ----
+// A view vw_grandes_contas resolve o vendedor por RCA1 e, se não houver mapeamento
+// ativo, cai no RCA2. Aqui reproduzimos essa resolução para sinalizar na UI quais
+// clientes chegaram via RCA2.
+
+export interface ClienteRCAInfo {
+  rca1Codigo: string;
+  rca1Nome: string;
+  rca2Codigo: string;
+  rca2Nome: string;
+  viaRCA2: boolean;
+}
+
+// "27 - ANNE KAROLINE" -> { codigo: "27", nome: "Anne Karoline" }
+function parseRCA(raw: string | null | undefined): { codigo: string; nome: string } {
+  const s = (raw || "").trim();
+  if (!s) return { codigo: "", nome: "" };
+  const [codigo, ...resto] = s.split(" ");
+  return { codigo: codigo.trim(), nome: normalizeVendedor(resto.join(" ").replace(/^-\s*/, "")) };
+}
+
+export async function fetchClientesRCA(): Promise<Record<string, ClienteRCAInfo>> {
+  // Códigos ativos no AGC
+  const codigos: number[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await externalSupabase
+      .from("grandes_contas")
+      .select("cod_cliente")
+      .eq("ativo", true)
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    codigos.push(...data.map(r => r.cod_cliente));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  if (codigos.length === 0) return {};
+
+  // Mapeamento RCA -> vendedor AGC (só os ativos, igual à view)
+  const { data: mapeamento, error: mapErr } = await externalSupabase
+    .from("mapeamento_rca")
+    .select("rca_codigo, vendedor_agc")
+    .eq("ativo", true);
+  if (mapErr) throw mapErr;
+  const mapRCA: Record<string, string> = {};
+  (mapeamento || []).forEach(m => { mapRCA[String(m.rca_codigo)] = m.vendedor_agc; });
+
+  const info: Record<string, ClienteRCAInfo> = {};
+  for (let i = 0; i < codigos.length; i += 200) {
+    const lote = codigos.slice(i, i + 200);
+    const { data, error } = await externalSupabase
+      .from("clientes")
+      .select("codcli, rca_vendedor, rca2_vendedor")
+      .in("codcli", lote);
+    if (error) throw error;
+    (data || []).forEach(c => {
+      const rca1 = parseRCA(c.rca_vendedor);
+      const rca2 = parseRCA(c.rca2_vendedor);
+      const vend1 = rca1.codigo ? mapRCA[rca1.codigo] : undefined;
+      const vend2 = rca2.codigo ? mapRCA[rca2.codigo] : undefined;
+      info[String(c.codcli)] = {
+        rca1Codigo: rca1.codigo,
+        rca1Nome: rca1.nome,
+        rca2Codigo: rca2.codigo,
+        rca2Nome: rca2.nome,
+        viaRCA2: !vend1 && !!vend2,
+      };
+    });
+  }
+  return info;
+}
+
 export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[]; pedidos: Pedido[] }> {
   const pedidos = await fetchPedidosRawFromDB(empresa);
   if (pedidos.length === 0) return { clientes: [], mesesCols: [], pedidos: [] };

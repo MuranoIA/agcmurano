@@ -5,6 +5,7 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import { heatmapColor } from "@/lib/heatmapColors";
 import StatusBadge from "./StatusBadge";
+import TagRCA2 from "./TagRCA2";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -14,7 +15,7 @@ interface Props {
 }
 
 const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
-  const { mesesCols, overlay, visitas, setVendedor } = useAppData();
+  const { mesesCols, overlay, visitas, setVendedor, rcaInfo } = useAppData();
   const { vendedores } = useEmpresa();
 
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
@@ -44,7 +45,10 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
       <div className="w-full max-w-2xl bg-card h-full overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-card z-10 border-b px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold">{c.Nome}</h2>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              {c.Nome}
+              <TagRCA2 info={rcaInfo[c.Codigo]} />
+            </h2>
             <span className="text-sm text-muted-foreground font-mono">{c.Codigo}</span>
           </div>
           <div className="flex items-center gap-3">

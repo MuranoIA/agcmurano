@@ -13,6 +13,15 @@ export interface AlertaAGC {
   // campos extras da JOIN
   nome_cliente?: string;
   dias_pendente?: number;
+  reentrada?: ReentradaInfo | null;
+}
+
+export interface ReentradaInfo {
+  cod_cliente: number;
+  saiu_em: string;
+  saiu_por: string;
+  motivo_saida: string;
+  dias_fora: number;
 }
 
 export interface HistoricoAGC {
@@ -42,6 +51,59 @@ export interface HistoricoFiltros {
   tipoEvento?: string;
 }
 
+const diasDesde = (iso: string): number =>
+  Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+
+const fmtDataBR = (iso: string): string => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("pt-BR");
+};
+
+// Histórico de saída do AGC de um cliente (null = nunca saiu)
+export async function verificarReentrada(codCliente: number): Promise<ReentradaInfo | null> {
+  const { data } = await externalSupabase
+    .from("historico_agc")
+    .select("created_at, usuario, detalhes")
+    .eq("cod_cliente", codCliente)
+    .eq("tipo_evento", "saiu_agc")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (!data || data.length === 0) return null;
+
+  return {
+    cod_cliente: codCliente,
+    saiu_em: data[0].created_at,
+    saiu_por: data[0].usuario,
+    motivo_saida: data[0].detalhes,
+    dias_fora: diasDesde(data[0].created_at),
+  };
+}
+
+// Versão em lote (uma query só) — usada pela lista de pendências
+export async function verificarReentradas(codigos: number[]): Promise<Record<number, ReentradaInfo>> {
+  if (codigos.length === 0) return {};
+  const { data } = await externalSupabase
+    .from("historico_agc")
+    .select("cod_cliente, created_at, usuario, detalhes")
+    .in("cod_cliente", codigos)
+    .eq("tipo_evento", "saiu_agc")
+    .order("created_at", { ascending: false });
+
+  const mapa: Record<number, ReentradaInfo> = {};
+  (data || []).forEach(h => {
+    if (mapa[h.cod_cliente]) return; // já registrou a saída mais recente
+    mapa[h.cod_cliente] = {
+      cod_cliente: h.cod_cliente,
+      saiu_em: h.created_at,
+      saiu_por: h.usuario,
+      motivo_saida: h.detalhes,
+      dias_fora: diasDesde(h.created_at),
+    };
+  });
+  return mapa;
+}
+
 // Buscar alertas pendentes
 export async function fetchAlertasPendentes(): Promise<AlertaAGC[]> {
   const { data, error } = await externalSupabase
@@ -61,10 +123,13 @@ export async function fetchAlertasPendentes(): Promise<AlertaAGC[]> {
     const nomes: Record<number, string> = {};
     if (clientes) clientes.forEach(c => { nomes[c.codcli] = c.cliente; });
 
+    const reentradas = await verificarReentradas(codigos);
+
     return data.map(a => ({
       ...a,
       nome_cliente: nomes[a.cod_cliente] || `Cliente ${a.cod_cliente}`,
-      dias_pendente: Math.floor((Date.now() - new Date(a.created_at).getTime()) / 86400000),
+      dias_pendente: diasDesde(a.created_at),
+      reentrada: reentradas[a.cod_cliente] || null,
     }));
   }
   return [];
@@ -81,7 +146,7 @@ export async function countAlertasPendentes(): Promise<number> {
 }
 
 // Aprovar alerta (cliente fica no AGC)
-export async function aprovarAlerta(id: number, usuario: string): Promise<void> {
+export async function aprovarAlerta(id: number, usuario: string, codCliente: number): Promise<void> {
   const { error } = await externalSupabase
     .from("alertas_agc")
     .update({
@@ -91,6 +156,17 @@ export async function aprovarAlerta(id: number, usuario: string): Promise<void> 
     })
     .eq("id", id);
   if (error) throw error;
+
+  // Registrar no histórico — diferenciando entrada normal de reentrada
+  const reentrada = await verificarReentrada(codCliente);
+  await externalSupabase.from("historico_agc").insert({
+    cod_cliente: codCliente,
+    tipo_evento: "entrou_agc",
+    detalhes: reentrada
+      ? `REENTRADA: Cliente reaprovado por ${usuario}. Havia sido removido por ${reentrada.saiu_por} em ${fmtDataBR(reentrada.saiu_em)} (${reentrada.dias_fora} dias fora).`
+      : `Cliente aprovado no AGC por ${usuario}.`,
+    usuario,
+  });
 }
 
 // Remover alerta (supervisor deve tirar do RCA no Winthor)

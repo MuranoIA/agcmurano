@@ -14,6 +14,8 @@ import {
   subscribeToOverlayChanges,
   bulkUpdateClienteFields,
   fetchPedidosFromDB,
+  fetchClientesRCA,
+  ClienteRCAInfo,
 } from "@/lib/supabaseService";
 import { recalcAllClientes } from "@/lib/recalcClientes";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ interface AppState {
   csvLoaded: boolean;
   overlay: OverlayStore;
   visitas: (Visita & { id?: string })[];
+  rcaInfo: Record<string, ClienteRCAInfo>;
   loading: boolean;
   periodFrom: Date | undefined;
   periodTo: Date | undefined;
@@ -69,6 +72,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [dataFromPedidos, setDataFromPedidos] = useState(false);
   const [overlay, setOverlay] = useState<OverlayStore>({ vendedores: {}, valores_mes: {}, visitas: [] });
   const [visitas, setVisitas] = useState<(Visita & { id?: string })[]>([]);
+  const [rcaInfo, setRcaInfo] = useState<Record<string, ClienteRCAInfo>>({});
   const [loading, setLoading] = useState(true);
 
   const defaultPeriod = () => {
@@ -89,10 +93,14 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const refreshData = useCallback(async () => {
     try {
-      const [pedidosResult, overlayResult, visitasResult] = await Promise.all([
+      const [pedidosResult, overlayResult, visitasResult, rcaResult] = await Promise.all([
         fetchPedidosFromDB(empresa),
         fetchFullOverlay(),
         fetchOverlayVisitas(),
+        fetchClientesRCA().catch(err => {
+          console.error("Erro ao carregar RCAs dos clientes:", err);
+          return {} as Record<string, ClienteRCAInfo>;
+        }),
       ]);
       if (pedidosResult.clientes.length > 0) {
         setRawClientes(pedidosResult.clientes);
@@ -117,6 +125,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       setOverlay(overlayResult);
       setVisitas(visitasResult);
+      setRcaInfo(rcaResult);
     } catch (err) {
       console.error("Error refreshing data:", err);
     } finally {
@@ -263,6 +272,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       csvLoaded,
       overlay,
       visitas: role === "vendedor" && vendorName ? visitas.filter(v => v.vendedor === vendorName) : visitas,
+      rcaInfo,
       loading,
       periodFrom,
       periodTo,

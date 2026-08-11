@@ -56,7 +56,6 @@ const TIPO_EVENTO_OPCOES: { value: string; label: string }[] = [
   { value: "novo_rca", label: "Novo RCA 🆕" },
   { value: "entrou_agc", label: "Entrou AGC ✅" },
   { value: "saiu_agc", label: "Saiu AGC ❌" },
-  { value: "rca_mudou", label: "RCA mudou 🔄" },
   { value: "rca_removido", label: "RCA removido ⚠️" },
 ];
 
@@ -171,8 +170,12 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
   const handleAprovar = async (alerta: AlertaAGC) => {
     setActionId(alerta.id);
     try {
-      await aprovarAlerta(alerta.id, usuario);
-      toast.success(`${alerta.nome_cliente} aprovado no AGC.`);
+      await aprovarAlerta(alerta.id, usuario, alerta.cod_cliente);
+      toast.success(
+        alerta.reentrada
+          ? `${alerta.nome_cliente} reaprovado no AGC (reentrada registrada no log).`
+          : `${alerta.nome_cliente} aprovado no AGC.`,
+      );
       await loadAlertas();
       await loadLog(page);
     } catch (err) {
@@ -253,7 +256,14 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {alertas.map(a => (
-                <div key={a.id} className="bg-card rounded-lg shadow-sm border p-4 flex flex-col gap-2">
+                <div
+                  key={a.id}
+                  className={`rounded-lg shadow-sm border p-4 flex flex-col gap-2 ${
+                    a.reentrada
+                      ? "border-amber-400 bg-amber-50 ring-1 ring-amber-300"
+                      : "bg-card"
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="font-medium truncate" title={a.nome_cliente}>{a.nome_cliente}</div>
@@ -273,6 +283,22 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
                   </div>
                   {a.detalhes && (
                     <div className="text-xs text-muted-foreground line-clamp-2" title={a.detalhes}>{a.detalhes}</div>
+                  )}
+                  {a.reentrada && (
+                    <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 mt-1">
+                      <p className="text-amber-800 text-xs font-bold">
+                        ⚠️ REENTRADA — Este cliente já foi removido do AGC
+                      </p>
+                      <p className="text-amber-700 text-xs mt-1">
+                        Removido por {capitalize(a.reentrada.saiu_por)} em {fmtDataHora(a.reentrada.saiu_em)}
+                        {" "}({a.reentrada.dias_fora} {a.reentrada.dias_fora === 1 ? "dia" : "dias"} atrás)
+                      </p>
+                      {a.reentrada.motivo_saida && (
+                        <p className="text-amber-600 text-xs italic mt-1" title={a.reentrada.motivo_saida}>
+                          "{a.reentrada.motivo_saida}"
+                        </p>
+                      )}
+                    </div>
                   )}
                   {isGestor && (
                     <div className="flex gap-2 mt-1">
