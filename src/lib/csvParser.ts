@@ -152,12 +152,19 @@ export function processPedidos(
     const vendedor = peds[0].vendedor;
     const segmento = peds[0].regiao || (vendedor.toLowerCase().includes("interior") ? "interior" : "capital");
 
+    // Clientes do AGC ainda sem faturamento vêm da view com data nula (LEFT JOIN).
+    // Essas linhas ficam de fora de todo cálculo de data — senão o epoch vira um
+    // mês fantasma ("Dez/69") que, por ordenar depois dos meses reais, passa a ser
+    // o "último mês" da tabela, do heatmap e dos insights.
+    const comData = peds.filter(p => p.data instanceof Date && !isNaN(p.data.getTime()));
+    const semCompras = comData.length === 0;
+
     // Drop clients whose first purchase is after referenceDate (didn't exist yet)
-    const allDates = peds.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());
-    if (allDates[0] > referenceDate) return [];
+    const allDates = comData.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());
+    if (!semCompras && allDates[0] > referenceDate) return [];
 
     // Period-scoped pedidos (used for Fat/meses/N_Pedidos)
-    const pedsPeriod = peds.filter(p => inPeriod(p.data));
+    const pedsPeriod = comData.filter(p => inPeriod(p.data));
 
     // Monthly billing — period-scoped
     const mesesMap: Record<string, number> = {};
@@ -170,7 +177,7 @@ export function processPedidos(
 
     // Full monthly map (used for TM_Mes and full mesesCols set)
     const mesesMapFull: Record<string, number> = {};
-    for (const p of peds) {
+    for (const p of comData) {
       const mesKey = fmtMesCol(p.data);
       if (!mesesMapFull[mesKey]) mesesMapFull[mesKey] = 0;
       mesesMapFull[mesKey] += p.tipo === "VENDA" ? p.valor : -p.valor;
@@ -185,7 +192,7 @@ export function processPedidos(
     const fatTotal = Object.values(mesesMap).reduce((s, v) => s + v, 0);
 
     // Full vendas history (for ciclo + ultima compra reference)
-    const vendas = peds.filter(p => p.tipo === "VENDA");
+    const vendas = comData.filter(p => p.tipo === "VENDA");
     const vendaDates = vendas.map(p => p.data).sort((a, b) => a.getTime() - b.getTime());
     const primeiraCompra = allDates[0];
 
@@ -195,8 +202,8 @@ export function processPedidos(
       ? vendaDatesUntilRef[vendaDatesUntilRef.length - 1]
       : allDates.filter(d => d <= referenceDate).pop() || allDates[allDates.length - 1];
 
-    // DSC relativo à data final do período
-    const dsc = daysBetween(ultimaCompraRef, referenceDate);
+    // DSC relativo à data final do período (sem nenhuma compra, não há o que medir)
+    const dsc = ultimaCompraRef ? daysBetween(ultimaCompraRef, referenceDate) : 0;
 
     // MCC - months with billing > 0 (period)
     const mcc = Object.values(mesesMap).filter(v => v > 0).length;
@@ -231,7 +238,9 @@ export function processPedidos(
 
     // Status
     let status: Cliente["Status"];
-    if (cicloMedio === 0) {
+    if (semCompras) {
+      status = "Inativo";
+    } else if (cicloMedio === 0) {
       status = dsc > 120 ? "Inativo" : dsc > 60 ? "Risco" : "Ativo";
     } else if (dsc < 1.5 * cicloMedio) {
       status = "Ativo";
@@ -270,8 +279,8 @@ export function processPedidos(
       Proxima_Acao: proximaAcao,
       N_Pedidos: nPedidos,
       Fat_Total: fatTotal,
-      Primeira_Compra: formatDateOnly(primeiraCompra),
-      Ultima_Compra: formatDateOnly(ultimaCompraRef),
+      Primeira_Compra: primeiraCompra ? formatDateOnly(primeiraCompra) : "",
+      Ultima_Compra: ultimaCompraRef ? formatDateOnly(ultimaCompraRef) : "",
       Segmento: segmento,
       meses: mesesMap,
       mesesFull: mesesMapFull,

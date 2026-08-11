@@ -5,6 +5,7 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 import TagRCA2 from "./TagRCA2";
+import ModalCadastrarLocalizacao from "./ModalCadastrarLocalizacao";
 import { ArrowUpDown } from "lucide-react";
 
 interface Props {
@@ -20,6 +21,7 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
   const [sortKey, setSortKey] = useState<SortKey>("Fat_Total");
   const [sortAsc, setSortAsc] = useState(false);
+  const [cadastroLoc, setCadastroLoc] = useState<Cliente | null>(null);
 
   const sorted = useMemo(() => {
     return [...clientes].sort((a, b) => {
@@ -40,16 +42,16 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
   };
 
   const headers: { key: SortKey; label: string; w?: string }[] = [
-    { key: "Codigo", label: "Código", w: "w-20" },
+    { key: "Codigo", label: "Cod.", w: "w-20" },
     { key: "Nome", label: "Nome", w: "w-48" },
-    { key: "Vendedor", label: "Vendedor", w: "w-28" },
+    { key: "Vendedor", label: "RCA", w: "w-28" },
     { key: "Status", label: "Status", w: "w-24" },
-    { key: "Ciclo_Medio_d", label: "Ciclo (d)", w: "w-20" },
+    { key: "Ciclo_Medio_d", label: "Ciclo", w: "w-20" },
     { key: "TM_Mes", label: "TM/Mês", w: "w-28" },
     { key: "Objetivo_R$", label: "Objetivo", w: "w-28" },
     { key: "lastMonth", label: lastMonth, w: "w-28" },
     { key: "MCC", label: "MCC", w: "w-16" },
-    { key: "Dias_Sem_Compra", label: "Dias s/C", w: "w-20" },
+    { key: "Dias_Sem_Compra", label: "DSC", w: "w-20" },
     { key: "Proxima_Acao", label: "Próx. Ação", w: "w-36" },
     { key: "Fat_Total", label: "Fat. Total", w: "w-28" },
   ];
@@ -57,6 +59,8 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
   const handleVendedorChange = (codigo: string, v: string) => {
     setVendedor(codigo, v);
   };
+
+  const temLocalizacao = (codigo: string) => clientesComLocalizacao.has(Number(codigo));
 
   return (
     <div className="overflow-x-auto rounded-lg border bg-card">
@@ -75,18 +79,26 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
             <tr key={c.Codigo} className={`cursor-pointer hover:bg-muted/30 ${i % 2 ? "bg-muted/10" : ""}`} onClick={() => onSelect(c)}>
               <td className="px-3 py-2 font-mono text-xs">{c.Codigo}</td>
               <td className="px-3 py-2 font-medium max-w-[200px]">
-                <span className="flex items-center gap-1 min-w-0">
-                  <span className="truncate">{c.Nome}</span>
-                  <TagRCA2 info={rcaInfo[c.Codigo]} />
-                  {!clientesComLocalizacao.has(Number(c.Codigo)) && (
-                    <span
-                      className="shrink-0 text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full"
-                      title="Cliente ainda sem coordenadas — o vendedor pode cadastrar ao registrar uma visita"
-                    >
-                      📍 Sem localização
-                    </span>
+                <div className="min-w-0">
+                  <span className="flex items-center gap-1 min-w-0">
+                    <span className="truncate text-sm">{c.Nome}</span>
+                    <TagRCA2 info={rcaInfo[c.Codigo]} />
+                    {temLocalizacao(c.Codigo) && (
+                      <span className="shrink-0 text-[9px] text-green-600" title="Localização cadastrada">📍</span>
+                    )}
+                  </span>
+                  {!temLocalizacao(c.Codigo) && (
+                    <div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setCadastroLoc(c); }}
+                        className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full hover:bg-amber-200 cursor-pointer"
+                        title="Cadastrar as coordenadas deste cliente"
+                      >
+                        📍 Cadastrar localização
+                      </button>
+                    </div>
                   )}
-                </span>
+                </div>
               </td>
               <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                 {c.Vendedor ? (
@@ -115,6 +127,15 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
           ))}
         </tbody>
       </table>
+
+      {cadastroLoc && (
+        <ModalCadastrarLocalizacao
+          open
+          onOpenChange={aberto => { if (!aberto) setCadastroLoc(null); }}
+          codCliente={Number(cadastroLoc.Codigo)}
+          nomeCliente={cadastroLoc.Nome}
+        />
+      )}
     </div>
   );
 };

@@ -88,7 +88,8 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
       nome: r.nome,
       vendedor: normalizeVendedor(r.vendedor),
       valor: Number(r.valor) || 0,
-      data: new Date(r.data),
+      // data nula = cliente do AGC sem faturamento; vira Data inválida (não epoch)
+      data: r.data ? new Date(r.data) : new Date(NaN),
       tipo,
       regiao: r.regiao || "capital",
       venda_propria: r.venda_propria === true,
