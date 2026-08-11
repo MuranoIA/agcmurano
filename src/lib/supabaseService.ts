@@ -70,7 +70,7 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
   while (true) {
     const { data, error } = await externalSupabase
       .from("vw_grandes_contas")
-      .select("id, pedido, cod_cliente, nome, vendedor, valor, data, tipo, regiao, venda_propria")
+      .select("id, pedido, cod_cliente, nome, vendedor, valor, data, tipo, regiao, venda_propria, posicao")
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
@@ -92,6 +92,7 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
       tipo,
       regiao: r.regiao || "capital",
       venda_propria: r.venda_propria === true,
+      posicao: r.posicao ?? null,
     };
   });
 }

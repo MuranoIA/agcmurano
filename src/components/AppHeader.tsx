@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from "react";
-import { LogOut, Upload } from "lucide-react";
+import { LogOut, Settings, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,9 +7,11 @@ import { useEmpresa, Empresa } from "@/contexts/EmpresaContext";
 
 interface Props {
   onNewUpload: () => void;
+  isGestor?: boolean;
+  onOpenConfig?: () => void;
 }
 
-const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
+const AppHeader: React.FC<Props> = ({ onNewUpload, isGestor, onOpenConfig }) => {
   const { loadCSV } = useAppData();
   const { signOut, user, role } = useAuth();
   const { empresa, setEmpresa, empresasPermitidas } = useEmpresa();
@@ -50,6 +52,11 @@ const AppHeader: React.FC<Props> = ({ onNewUpload }) => {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {isGestor && onOpenConfig && (
+            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={onOpenConfig}>
+              <Settings size={16} className="mr-1" /> Metas
+            </Button>
+          )}
           {role === "admin" && (
             <>
               <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={() => fileRef.current?.click()}>

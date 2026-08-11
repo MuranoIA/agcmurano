@@ -15,17 +15,30 @@ interface Props {
   setBusca: (v: string) => void;
   somenteVendasProprias: boolean;
   setSomenteVendasProprias: (v: boolean) => void;
+  posicoesAtivas: Record<string, boolean>;
+  setPosicoesAtivas: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }
 
-const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, status, setStatus, busca, setBusca, somenteVendasProprias, setSomenteVendasProprias }) => {
+const corPosicao = (posicao: string, ativo: boolean): string => {
+  if (!ativo) return "bg-gray-50 border-gray-200 text-gray-400";
+  if (posicao === "DEV - Devolucao") return "bg-red-100 border-red-300 text-red-700";
+  if (posicao === "F - Faturado") return "bg-green-100 border-green-300 text-green-700";
+  if (posicao === "L - Liberado") return "bg-blue-100 border-blue-300 text-blue-700";
+  return "bg-yellow-100 border-yellow-300 text-yellow-700";
+};
+
+const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, status, setStatus, busca, setBusca, somenteVendasProprias, setSomenteVendasProprias, posicoesAtivas, setPosicoesAtivas }) => {
   const { vendedores, regioes } = useEmpresa();
   const { permissions } = usePermissions();
   const isVendedorRestrito = permissions?.role === "vendedor";
   const vendedorOpts = ["Todos", ...vendedores];
   const statusOpts = ["Todos", "Ativo", "Risco", "Inativo"];
 
+  const nenhumaPosicao = Object.values(posicoesAtivas).every(v => !v);
+
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-4">
+    <div className="mb-4 space-y-2">
+    <div className="flex flex-wrap items-center gap-3">
       {!isVendedorRestrito && (
         <div className="flex gap-1">
           {vendedorOpts.map(v => (
@@ -64,6 +77,25 @@ const Filters: React.FC<Props> = ({ vendedor, setVendedor, regiao, setRegiao, st
       >
         {somenteVendasProprias ? "✅ Vendas próprias" : "📊 Todas as vendas"}
       </Button>
+    </div>
+
+    {/* Toggles de posição do pedido */}
+    <div className="flex flex-wrap gap-2 items-center">
+      <span className="text-xs text-muted-foreground font-medium">Posição:</span>
+      {Object.entries(posicoesAtivas).map(([posicao, ativo]) => (
+        <button
+          key={posicao}
+          onClick={() => setPosicoesAtivas(prev => ({ ...prev, [posicao]: !prev[posicao] }))}
+          title={posicao}
+          className={`text-xs px-2 py-1 rounded-full border transition-colors ${corPosicao(posicao, ativo)}`}
+        >
+          {posicao.split(" - ")[0]}
+        </button>
+      ))}
+      {nenhumaPosicao && (
+        <span className="text-xs text-red-600">Nenhuma posição selecionada — os indicadores ficam zerados.</span>
+      )}
+    </div>
     </div>
   );
 };

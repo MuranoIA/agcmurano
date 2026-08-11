@@ -17,6 +17,8 @@ import VisaoGeral from "@/components/VisaoGeral";
 import ClientePanel from "@/components/ClientePanel";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import PendenciasAGC from "@/components/PendenciasAGC";
+import ConfigMetas from "@/components/ConfigMetas";
+import TendenciaMeta from "@/components/TendenciaMeta";
 import { countAlertasPendentes } from "@/lib/alertasService";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +47,8 @@ const Dashboard: React.FC = () => {
   const mesesNoPeriodo = appData?.mesesNoPeriodo ?? 1;
   const somenteVendasProprias = appData?.somenteVendasProprias ?? false;
   const setSomenteVendasProprias = appData?.setSomenteVendasProprias ?? (() => {});
+  const posicoesAtivas = appData?.posicoesAtivas ?? {};
+  const setPosicoesAtivas = appData?.setPosicoesAtivas ?? (() => {});
   const [vendedor, setVendedor] = useState("Todos");
   const [regiao, setRegiao] = useState("Todos");
   const [status, setStatus] = useState("Todos");
@@ -53,6 +57,8 @@ const Dashboard: React.FC = () => {
   const [showNovoCliente, setShowNovoCliente] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(role === "admin" ? "visao" : "clientes");
   const [pendenciasCount, setPendenciasCount] = useState(0);
+  const [showConfigMetas, setShowConfigMetas] = useState(false);
+  const [metasVersion, setMetasVersion] = useState(0);
 
   // Contagem de pendências (badge) — só pra gestores, atualiza a cada 60s
   useEffect(() => {
@@ -146,7 +152,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader onNewUpload={handleNewUpload} />
+      <AppHeader onNewUpload={handleNewUpload} isGestor={isGestor} onOpenConfig={() => setShowConfigMetas(true)} />
       <div className="container px-4 py-4">
         {activeTab !== "interior" && (
           <>
@@ -157,7 +163,14 @@ const Dashboard: React.FC = () => {
               </div>
             )}
             <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
-            <Filters vendedor={vendedor} setVendedor={setVendedor} regiao={regiao} setRegiao={setRegiao} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} somenteVendasProprias={somenteVendasProprias} setSomenteVendasProprias={setSomenteVendasProprias} />
+            <TendenciaMeta
+              clientes={filtered}
+              periodFrom={periodFrom}
+              periodTo={periodTo}
+              isGestor={isGestor}
+              refreshKey={metasVersion}
+            />
+            <Filters vendedor={vendedor} setVendedor={setVendedor} regiao={regiao} setRegiao={setRegiao} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} somenteVendasProprias={somenteVendasProprias} setSomenteVendasProprias={setSomenteVendasProprias} posicoesAtivas={posicoesAtivas} setPosicoesAtivas={setPosicoesAtivas} />
             <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
           </>
         )}
@@ -285,6 +298,15 @@ const Dashboard: React.FC = () => {
       )}
 
       <NovoClienteModal open={showNovoCliente} onOpenChange={setShowNovoCliente} />
+
+      {isGestor && (
+        <ConfigMetas
+          open={showConfigMetas}
+          onOpenChange={setShowConfigMetas}
+          usuario={user?.email ?? permissions?.nome ?? "gestor"}
+          onSaved={() => setMetasVersion(v => v + 1)}
+        />
+      )}
     </div>
   );
 };

@@ -39,6 +39,8 @@ interface AppState {
   mesesNoPeriodo: number;
   somenteVendasProprias: boolean;
   setSomenteVendasProprias: (v: boolean) => void;
+  posicoesAtivas: Record<string, boolean>;
+  setPosicoesAtivas: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   loadCSV: (text: string) => Promise<void>;
   refreshData: () => Promise<void>;
   setVendedor: (codigo: string, vendedor: string) => Promise<void>;
@@ -49,6 +51,16 @@ interface AppState {
 
 const Ctx = createContext<AppState>(null!);
 export const useAppData = () => useContext(Ctx);
+
+// Posições de pedido reconhecidas — todas ativas por padrão
+export const POSICOES_PADRAO: Record<string, boolean> = {
+  "F - Faturado": true,
+  "L - Liberado": true,
+  "P - Pendente": true,
+  "B - Bloqueado": true,
+  "M - Montado": true,
+  "DEV - Devolucao": true,
+};
 
 function applyOverlay(raw: Cliente[], overlay: OverlayStore, skipValoresMes = false): Cliente[] {
   return raw.map(c => {
@@ -85,6 +97,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [periodFrom, setPeriodFrom] = useState<Date | undefined>(() => defaultPeriod().from);
   const [periodTo, setPeriodTo] = useState<Date | undefined>(() => defaultPeriod().to);
   const [somenteVendasProprias, setSomenteVendasProprias] = useState(false);
+  const [posicoesAtivas, setPosicoesAtivas] = useState<Record<string, boolean>>({ ...POSICOES_PADRAO });
   const resetPeriod = useCallback(() => {
     const d = defaultPeriod();
     setPeriodFrom(d.from);
@@ -230,13 +243,14 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Recompute period-scoped clientes when rawPedidos, period or vendas-próprias filter changes
   const periodClientes = useMemo(() => {
     if (dataFromPedidos && rawPedidos.length > 0) {
-      const pedidos = somenteVendasProprias
-        ? rawPedidos.filter(p => p.venda_propria === true)
-        : rawPedidos;
+      let pedidos = rawPedidos;
+      if (somenteVendasProprias) pedidos = pedidos.filter(p => p.venda_propria === true);
+      // Filtro de posição — linhas sem posição são clientes sem compra, sempre mantidos
+      pedidos = pedidos.filter(p => (p.posicao ? posicoesAtivas[p.posicao] ?? true : true));
       return processPedidos(pedidos, { from: periodFrom, to: periodTo }).clientes;
     }
     return rawClientes;
-  }, [dataFromPedidos, rawPedidos, periodFrom, periodTo, rawClientes, somenteVendasProprias]);
+  }, [dataFromPedidos, rawPedidos, periodFrom, periodTo, rawClientes, somenteVendasProprias, posicoesAtivas]);
 
   const clientes = useMemo(() => {
     let list = applyOverlay(periodClientes, overlay, dataFromPedidos);
@@ -282,6 +296,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       mesesNoPeriodo,
       somenteVendasProprias,
       setSomenteVendasProprias,
+      posicoesAtivas,
+      setPosicoesAtivas,
       loadCSV,
       refreshData,
       setVendedor: handleSetVendedor,
