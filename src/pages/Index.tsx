@@ -15,6 +15,7 @@ import RelatorioVisitas from "@/components/RelatorioVisitas";
 import RankingTable from "@/components/RankingTable";
 import VisaoGeral from "@/components/VisaoGeral";
 import ClientePanel from "@/components/ClientePanel";
+import ConsultaClientes, { ClienteBusca, nomeRCA } from "@/components/ConsultaClientes";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import PendenciasAGC from "@/components/PendenciasAGC";
 import ConfigMetas from "@/components/ConfigMetas";
@@ -116,6 +117,37 @@ const Dashboard: React.FC = () => {
 
   const handleNewUpload = useCallback(() => {}, []);
 
+  /**
+   * Consulta abre o mesmo painel de detalhe. Se o cliente já está na base do AGC,
+   * usa o registro real (com métricas); senão monta um mínimo — o painel busca
+   * cadastro, ranking, itens e pedidos direto do banco pelo código.
+   */
+  const abrirClienteDaConsulta = useCallback((codcli: number, c: ClienteBusca) => {
+    const doAGC = clientes.find(x => x.Codigo === String(codcli));
+    if (doAGC) { setSelectedCliente(doAGC); return; }
+    setSelectedCliente({
+      Codigo: String(codcli),
+      Nome: c.cliente || `Cliente ${codcli}`,
+      Vendedor: nomeRCA(c.rca_vendedor) || "",
+      Objetivo_R$: 0,
+      TM_Mes: 0,
+      TM_Pedido: 0,
+      Ciclo_Medio_d: 0,
+      MCC: 0,
+      Meses_1a_Compra: 0,
+      Dias_Sem_Compra: 0,
+      Status: c.ativo ? "Ativo" : "Inativo",
+      Dias_Para_Acao: 0,
+      Proxima_Acao: "",
+      N_Pedidos: 0,
+      Fat_Total: 0,
+      Primeira_Compra: "",
+      Ultima_Compra: "",
+      Segmento: "",
+      meses: {},
+    });
+  }, [clientes]);
+
   const exportAll = () => {
     const headers = ["Codigo", "Nome", "Vendedor", "Status", "TM_Mes", "Objetivo_R$", "Ciclo_Medio_d", "MCC", "Dias_Sem_Compra", "Proxima_Acao", "Fat_Total", ...mesesCols];
     const rows = filtered.map(c => [
@@ -154,7 +186,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background">
       <AppHeader onNewUpload={handleNewUpload} isGestor={isGestor} onOpenConfig={() => setShowConfigMetas(true)} />
       <div className="container px-4 py-4">
-        {activeTab !== "interior" && (
+        {activeTab !== "interior" && activeTab !== "consulta" && (
           <>
             {somenteVendasProprias && (
               <div className="mb-3 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 text-xs text-green-700 flex items-center gap-2">
@@ -183,6 +215,7 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="heatmap">Heatmap Mensal</TabsTrigger>
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
+              <TabsTrigger value="consulta">Consulta</TabsTrigger>
               {!isVendedorRestrito && <TabsTrigger value="registro">Relatório de Visitas</TabsTrigger>}
               {isGestor && (
                 <TabsTrigger value="pendencias">
@@ -225,6 +258,9 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="ranking">
             <RankingTable clientes={filtered} />
+          </TabsContent>
+          <TabsContent value="consulta">
+            <ConsultaClientes onSelectCliente={abrirClienteDaConsulta} />
           </TabsContent>
           {!isVendedorRestrito && (
             <TabsContent value="registro">
