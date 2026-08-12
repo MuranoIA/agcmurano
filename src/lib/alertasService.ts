@@ -226,11 +226,15 @@ export async function fetchHistorico(limite: number = 50): Promise<HistoricoAGC[
 
 // Buscar clientes rejeitados que ainda estão no RCA
 export async function fetchRejeitadosNoRCA(): Promise<ClienteRejeitadoNoRCA[]> {
-  // Buscar clientes com ativo=false no grandes_contas
+  // Buscar clientes com ativo=false no grandes_contas.
+  // Exclui os vendedores cadastrados como clientes (aprovado_por = 'vendedor_proprio'):
+  // não são pendência de remoção do RCA. O `or` mantém quem não tem aprovador —
+  // em SQL `aprovado_por <> 'x'` é NULL para NULL e o registro sumiria da lista.
   const { data: inativos, error } = await externalSupabase
     .from("grandes_contas")
     .select("cod_cliente, vendedor")
-    .eq("ativo", false);
+    .eq("ativo", false)
+    .or("aprovado_por.is.null,aprovado_por.neq.vendedor_proprio");
   if (error) throw error;
   if (!inativos || inativos.length === 0) return [];
 
