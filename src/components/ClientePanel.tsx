@@ -8,6 +8,7 @@ import StatusBadge from "./StatusBadge";
 import TagRCA2 from "./TagRCA2";
 import ClienteRankings from "./ClienteRankings";
 import ClientePedidos from "./ClientePedidos";
+import PagamentosCliente from "./PagamentosCliente";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
 
   const [detalhe, setDetalhe] = useState<ClienteDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [abaModal, setAbaModal] = useState<"resumo" | "pagamentos">("resumo");
 
   const codCliente = Number(c.Codigo);
 
@@ -70,6 +72,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
     let cancelado = false;
     setCarregando(true);
     setDetalhe(null);
+    setAbaModal("resumo");
     if (!Number.isFinite(codCliente)) {
       setCarregando(false);
       return;
@@ -205,7 +208,37 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
           )}
         </div>
 
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-4 sm:p-6">
+          {/* ============ ABAS ============ */}
+          <div className="flex border-b mb-4">
+            {([["resumo", "Resumo"], ["pagamentos", "Pagamentos"]] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setAbaModal(id)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  abaModal === id
+                    ? "border-[#621244] text-[#621244]"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {abaModal === "pagamentos" && (
+            carregando ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin mr-2" size={16} />
+                <span className="text-sm text-muted-foreground">Carregando pagamentos...</span>
+              </div>
+            ) : (
+              <PagamentosCliente cpfCnpj={cad?.cpf_cnpj} nomeCliente={cad?.cliente} />
+            )
+          )}
+
+          <div className={`space-y-6 ${abaModal === "resumo" ? "" : "hidden"}`}>
           {/* ============ SEÇÃO 2: RANKING GERAL ============ */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {carregando ? (
@@ -350,6 +383,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
               </div>
             </Secao>
           )}
+          </div>
         </div>
       </div>
     </div>
