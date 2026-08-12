@@ -1,5 +1,5 @@
 /* Service worker do AGC — cache do shell estático. Dados sempre vêm da rede. */
-const CACHE_NAME = 'agc-v1';
+const CACHE_NAME = 'agc-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
