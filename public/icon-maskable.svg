@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Variante "maskable": launchers do Android recortam o ícone em círculo/squircle
+    e só garantem os 80% centrais (círculo de raio 205 no centro). Todo o conteúdo
+    fica dentro dessa zona segura — por isso não há a barra colada na borda.
+  -->
+  <rect width="512" height="512" fill="#621244" />
+  <text x="256" y="292" text-anchor="middle" font-family="Inter, Arial, Helvetica, sans-serif" font-weight="800" font-size="150" fill="#ffffff">AGC</text>
+  <rect x="176" y="326" width="160" height="16" rx="8" fill="#dd4222" />
+</svg>

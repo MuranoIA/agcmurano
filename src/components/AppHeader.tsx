@@ -32,7 +32,12 @@ const AppHeader: React.FC<Props> = ({ onNewUpload, isGestor, onOpenConfig }) => 
     <header className={headerClass}>
       <div className="container flex items-center justify-between h-14 px-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-lg font-bold tracking-tight truncate">{empresa}</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-8 w-8 shrink-0 rounded-lg bg-primary-foreground flex items-center justify-center">
+              <span className="text-primary text-[11px] font-black tracking-tight">AGC</span>
+            </div>
+            <h1 className="text-lg font-bold tracking-tight truncate">{empresa}</h1>
+          </div>
           {empresasPermitidas.length > 1 && (
             <div className="hidden sm:flex items-center gap-1 bg-primary-foreground/10 rounded-md p-0.5">
               {empresasPermitidas.map((e) => (
