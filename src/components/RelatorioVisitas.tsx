@@ -54,6 +54,8 @@ const RelatorioVisitas: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [fVendedor, setFVendedor] = useState("Todos");
   const [fSemana, setFSemana] = useState("Todas");
+  const [fDia, setFDia] = useState("");
+  const [fStatus, setFStatus] = useState<"Todos" | StatusVisita>("Todos");
 
   const mesRef = useMemo(() => `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, "0")}`, [ref]);
   const mesLabel = `${MESES[ref.getMonth()]}/${ref.getFullYear()}`;
@@ -73,7 +75,20 @@ const RelatorioVisitas: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const navMes = (delta: number) => setRef(new Date(ref.getFullYear(), ref.getMonth() + delta, 1));
+  const navMes = (delta: number) => {
+    setRef(new Date(ref.getFullYear(), ref.getMonth() + delta, 1));
+    setFDia("");
+  };
+
+  /** Dia fora do mês carregado: navega pro mês dele pra não zerar a lista. */
+  const mudarDia = (iso: string) => {
+    setFDia(iso);
+    if (iso && iso.slice(0, 7) !== mesRef) {
+      const d = parseISODate(iso);
+      setRef(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+  };
+
   const nomeDe = (cod: number) => nomes[cod] || `Cliente ${cod}`;
   const nomeVisita = (v: AgendaVisita) => (v.prospeccao && v.nome_prospeccao ? v.nome_prospeccao : nomeDe(v.cod_cliente));
 
@@ -98,18 +113,20 @@ const RelatorioVisitas: React.FC = () => {
     let list = [...agenda];
     if (fVendedor !== "Todos") list = list.filter(v => v.vendedor === fVendedor);
     if (fSemana !== "Todas") list = list.filter(v => toISODate(getTerca(parseISODate(v.data_visita))) === fSemana);
+    if (fDia) list = list.filter(v => v.data_visita === fDia);
+    if (fStatus !== "Todos") list = list.filter(v => v.status === fStatus);
     return list.sort((a, b) =>
       a.data_visita.localeCompare(b.data_visita) ||
       a.vendedor.localeCompare(b.vendedor) ||
       a.ordem - b.ordem,
     );
-  }, [agenda, fVendedor, fSemana]);
+  }, [agenda, fVendedor, fSemana, fDia, fStatus]);
 
-  // Resumo por vendedor (sobre o conjunto filtrado por semana, mas ignora filtro de vendedor)
+  // Resumo por vendedor (segue os filtros de período, mas ignora vendedor e status)
   const resumo = useMemo(() => {
-    const base = fSemana === "Todas"
-      ? agenda
-      : agenda.filter(v => toISODate(getTerca(parseISODate(v.data_visita))) === fSemana);
+    let base = agenda;
+    if (fSemana !== "Todas") base = base.filter(v => toISODate(getTerca(parseISODate(v.data_visita))) === fSemana);
+    if (fDia) base = base.filter(v => v.data_visita === fDia);
     const map = new Map<string, { agendadas: number; realizadas: number; vendas: number; valor: number }>();
     base.forEach(v => {
       const r = map.get(v.vendedor) || { agendadas: 0, realizadas: 0, vendas: 0, valor: 0 };
@@ -123,7 +140,7 @@ const RelatorioVisitas: React.FC = () => {
     return [...map.entries()]
       .map(([vendedor, r]) => ({ vendedor, ...r, taxa: r.realizadas > 0 ? (r.vendas / r.realizadas) * 100 : 0 }))
       .sort((a, b) => a.vendedor.localeCompare(b.vendedor, "pt-BR"));
-  }, [agenda, fSemana]);
+  }, [agenda, fSemana, fDia]);
 
   const totais = useMemo(() => resumo.reduce(
     (acc, r) => ({
@@ -142,7 +159,8 @@ const RelatorioVisitas: React.FC = () => {
       STATUS_LABEL[v.status], v.vendeu ? "Sim" : "Não", v.vendeu ? String(v.valor_venda) : "",
       gpsTexto(v), v.resultado || "", v.observacao || "",
     ]);
-    downloadFile(exportCSV(headers, rows), `relatorio_visitas_${mesRef}.csv`);
+    const sufixo = fStatus === "Todos" ? "" : `_${fStatus}`;
+    downloadFile(exportCSV(headers, rows), `relatorio_visitas_${fDia || mesRef}${sufixo}.csv`);
   };
 
   return (
@@ -153,7 +171,7 @@ const RelatorioVisitas: React.FC = () => {
           <h3 className="font-semibold text-base min-w-[120px] text-center">Relatório — {mesLabel}</h3>
           <Button variant="outline" size="sm" onClick={() => navMes(1)}><ChevronRight size={16} /></Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={fVendedor} onValueChange={setFVendedor}>
             <SelectTrigger className="w-36 h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -166,6 +184,35 @@ const RelatorioVisitas: React.FC = () => {
             <SelectContent>
               <SelectItem value="Todas">Todas semanas</SelectItem>
               {semanas.map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+            Dia específico
+            <input
+              type="date"
+              value={fDia}
+              onChange={e => mudarDia(e.target.value)}
+              aria-label="Dia específico"
+              className="h-9 rounded-md border bg-card px-2 text-sm text-foreground"
+            />
+            {fDia && (
+              <button
+                type="button"
+                onClick={() => setFDia("")}
+                title="Limpar dia"
+                className="text-muted-foreground hover:text-foreground px-1"
+              >
+                ✕
+              </button>
+            )}
+          </label>
+          <Select value={fStatus} onValueChange={v => setFStatus(v as "Todos" | StatusVisita)}>
+            <SelectTrigger className="w-32 h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todos status</SelectItem>
+              {(Object.keys(STATUS_LABEL) as StatusVisita[]).map(s => (
+                <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={loadData} title="Atualizar">
