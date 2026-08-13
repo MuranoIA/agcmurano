@@ -118,7 +118,7 @@ const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, loc, editabl
               className="text-[10px] font-medium text-green-700 dark:text-green-400"
               title="Venda confirmada contra o faturamento"
             >
-              ✅ {visita.valor_venda > 0 ? fmtBRL(visita.valor_venda) : "Confirmada"}
+              ✅ {visita.valor_venda > 0 ? fmtBRL(visita.valor_venda) : "Bonificação"}
             </span>
           ) : (
             <span className="text-[10px] font-medium text-amber-600">⏳ Aguardando confirmação</span>
