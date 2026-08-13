@@ -2,11 +2,14 @@ import React from "react";
 import { AgendaVisita, Prioridade, StatusVisita } from "@/lib/agendaService";
 import { fmtBRL } from "@/lib/format";
 import { CheckCircle2, MessageSquare, GripVertical, Trash2 } from "lucide-react";
+import { Coordenadas, linkRota } from "@/lib/localizacaoService";
 
 interface Props {
   visita: AgendaVisita;
   nome: string;
   diasSemCompra?: number;
+  /** Localização cadastrada do cliente — habilita o "Ir até o cliente". */
+  loc?: Coordenadas;
   editable: boolean;
   onRealizar: () => void;
   onDetalhes: () => void;
@@ -28,11 +31,12 @@ const STATUS_CONFIG: Record<StatusVisita, { bg: string; label: string; icon?: st
   cancelada: { bg: "bg-muted opacity-70", label: "Cancelada", icon: "✖️" },
 };
 
-const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, onRealizar, onDetalhes, onDragStart, onDelete }) => {
+const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, loc, editable, onRealizar, onDetalhes, onDragStart, onDelete }) => {
   const prio = PRIORIDADE_CONFIG[visita.prioridade] ?? PRIORIDADE_CONFIG.normal;
   const st = STATUS_CONFIG[visita.status] ?? STATUS_CONFIG.agendada;
   const cancelada = visita.status === "cancelada";
   const realizada = visita.status === "realizada";
+  const agendada = visita.status === "agendada";
 
   return (
     <div
@@ -76,6 +80,22 @@ const VisitaCard: React.FC<Props> = ({ visita, nome, diasSemCompra, editable, on
           <span className="font-semibold text-green-700 dark:text-green-400">{fmtBRL(visita.valor_venda)}</span>
         )}
       </div>
+
+      {agendada && loc && (
+        <a
+          href={linkRota(loc.lat, loc.lng)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 mt-1"
+        >
+          🗺️ Ir até o cliente
+        </a>
+      )}
+
+      {agendada && !loc && !visita.prospeccao && (
+        <div className="text-[9px] text-muted-foreground mt-1">📍 Sem localização cadastrada</div>
+      )}
 
       {realizada && (visita.dentro_do_raio === true || visita.dentro_do_raio === false) && (
         <div className="mt-1">

@@ -123,6 +123,67 @@ export function extrairCoordenadas(input: string): Coordenadas | null {
 export const linkMaps = (lat: number, lng: number): string =>
   `https://maps.google.com/?q=${lat},${lng}`;
 
+// ---- ROTA / NAVEGAÇÃO ----
+
+/** Google Maps aceita no máximo 10 paradas na URL de direções (destino + 9 waypoints). */
+export const MAX_PARADAS_ROTA = 10;
+
+/** URL de navegação ponto-a-ponto (abre o app/site do Google Maps traçando a rota até o destino). */
+export const linkRota = (lat: number, lng: number): string =>
+  `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+
+/**
+ * URL de rota com várias paradas. A última coordenada vira o destino; as demais, waypoints
+ * (na ordem em que aparecem). O separador `|` vai como %7C — as vírgulas podem ir cruas.
+ */
+export function linkRotaMultipla(origem: Coordenadas, paradas: Coordenadas[]): string | null {
+  if (paradas.length === 0) return null;
+  const destino = paradas[paradas.length - 1];
+  const waypoints = paradas.slice(0, -1);
+  let url = "https://www.google.com/maps/dir/?api=1";
+  url += `&origin=${origem.lat},${origem.lng}`;
+  url += `&destination=${destino.lat},${destino.lng}`;
+  if (waypoints.length > 0) {
+    url += `&waypoints=${waypoints.map(p => `${p.lat},${p.lng}`).join("%7C")}`;
+  }
+  url += "&travelmode=driving";
+  return url;
+}
+
+/**
+ * Ordena os itens pelo vizinho mais próximo, partindo da origem: escolhe o mais perto,
+ * anda até ele e repete. Heurística simples — não é a rota ótima, mas é boa o bastante
+ * para um dia de visitas e roda instantaneamente.
+ * Itens sem coordenada são descartados.
+ */
+export function ordenarPorProximidade<T>(
+  origem: Coordenadas,
+  itens: T[],
+  coordDe: (item: T) => Coordenadas | undefined,
+): T[] {
+  const restantes = itens.filter(i => !!coordDe(i));
+  const resultado: T[] = [];
+  let atual = origem;
+
+  while (restantes.length > 0) {
+    let menorDist = Infinity;
+    let maisProximo = 0;
+    for (let i = 0; i < restantes.length; i++) {
+      const loc = coordDe(restantes[i])!;
+      const dist = calcularDistancia(atual.lat, atual.lng, loc.lat, loc.lng);
+      if (dist < menorDist) {
+        menorDist = dist;
+        maisProximo = i;
+      }
+    }
+    const escolhido = restantes.splice(maisProximo, 1)[0];
+    resultado.push(escolhido);
+    atual = coordDe(escolhido)!;
+  }
+
+  return resultado;
+}
+
 // ---- LEITURA ----
 
 /** Localização cadastrada de um cliente (null se ainda não tem). */
@@ -161,6 +222,36 @@ export async function fetchClientesComLocalizacao(): Promise<Set<number>> {
     from += pageSize;
   }
   return comLoc;
+}
+
+/**
+ * Coordenadas de um conjunto específico de clientes (só os que já têm localização).
+ * Usado pela agenda para montar rotas sem carregar a base inteira.
+ */
+export async function fetchLocalizacoesDeClientes(
+  codigos: number[],
+): Promise<Record<number, Coordenadas>> {
+  const unicos = [...new Set(codigos.filter(c => Number.isFinite(c) && c > 0))];
+  const mapa: Record<number, Coordenadas> = {};
+  if (unicos.length === 0) return mapa;
+
+  const chunkSize = 200;
+  for (let i = 0; i < unicos.length; i += chunkSize) {
+    const chunk = unicos.slice(i, i + chunkSize);
+    const { data, error } = await externalSupabase
+      .from("clientes")
+      .select("codcli, lat_cliente, lng_cliente")
+      .in("codcli", chunk)
+      .not("lat_cliente", "is", null)
+      .not("lng_cliente", "is", null);
+    if (error) throw error;
+    (data || []).forEach(c => {
+      const lat = num(c.lat_cliente);
+      const lng = num(c.lng_cliente);
+      if (coordValida(lat, lng)) mapa[c.codcli] = { lat, lng };
+    });
+  }
+  return mapa;
 }
 
 // ---- ESCRITA ----

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Sparkles, Plus, Loader2, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Plus, Loader2, RefreshCw, Route } from "lucide-react";
 import { toast } from "sonner";
 import VisitaCard from "./VisitaCard";
 import ModalRealizarVisita from "./ModalRealizarVisita";
@@ -29,6 +29,14 @@ import {
   VISITAS_OBRIGATORIAS,
   VISITAS_MAX,
 } from "@/lib/agendaService";
+import {
+  Coordenadas,
+  MAX_PARADAS_ROTA,
+  fetchLocalizacoesDeClientes,
+  linkRotaMultipla,
+  obterLocalizacao,
+  ordenarPorProximidade,
+} from "@/lib/localizacaoService";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -49,6 +57,8 @@ const AgendaVisitasV2: React.FC = () => {
 
   const [realizarVisita, setRealizarVisita] = useState<AgendaVisita | null>(null);
   const [addDia, setAddDia] = useState<string | null>(null);
+  const [locClientes, setLocClientes] = useState<Record<number, Coordenadas>>({});
+  const [roteirizando, setRoteirizando] = useState<string | null>(null);
 
   const dragId = useRef<number | null>(null);
 
@@ -107,6 +117,60 @@ const AgendaVisitasV2: React.FC = () => {
   }, [vendedorAtivo, dias]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Localização cadastrada dos clientes da semana (para "Ir até o cliente" e roteirização)
+  const codigosAgenda = useMemo(
+    () => [...new Set(agenda.filter(v => !v.prospeccao && v.cod_cliente > 0).map(v => v.cod_cliente))].sort((a, b) => a - b),
+    [agenda],
+  );
+  const codigosKey = codigosAgenda.join(",");
+
+  useEffect(() => {
+    if (!codigosKey) { setLocClientes({}); return; }
+    let cancelado = false;
+    fetchLocalizacoesDeClientes(codigosKey.split(",").map(Number))
+      .then(mapa => { if (!cancelado) setLocClientes(mapa); })
+      .catch(() => { if (!cancelado) setLocClientes({}); });
+    return () => { cancelado = true; };
+  }, [codigosKey]);
+
+  /** Visitas agendadas do dia que já têm localização cadastrada — as roteirizáveis. */
+  const roteirizaveisDe = useCallback(
+    (diaISO: string) =>
+      agenda.filter(v => v.data_visita === diaISO && v.status === "agendada" && !!locClientes[v.cod_cliente]),
+    [agenda, locClientes],
+  );
+
+  const roteirizarDia = async (diaISO: string) => {
+    const visitas = roteirizaveisDe(diaISO);
+    if (visitas.length === 0) {
+      toast.error("Nenhuma visita com localização cadastrada neste dia");
+      return;
+    }
+    setRoteirizando(diaISO);
+    try {
+      const gps = await obterLocalizacao();
+      if (!gps) {
+        toast.error("GPS necessário para roteirizar. Permita o acesso à localização.");
+        return;
+      }
+      const ordenadas = ordenarPorProximidade(gps, visitas, v => locClientes[v.cod_cliente]);
+      const usadas = ordenadas.slice(0, MAX_PARADAS_ROTA);
+      const url = linkRotaMultipla(gps, usadas.map(v => locClientes[v.cod_cliente]));
+      if (!url) {
+        toast.error("Não foi possível montar a rota");
+        return;
+      }
+      if (ordenadas.length > MAX_PARADAS_ROTA) {
+        toast.info(`Rota com as ${MAX_PARADAS_ROTA} paradas mais próximas (de ${ordenadas.length})`);
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error("Erro ao roteirizar: " + errMsg(err));
+    } finally {
+      setRoteirizando(null);
+    }
+  };
 
   const handleGerar = async () => {
     if (!vendedorAtivo) return;
@@ -208,6 +272,7 @@ const AgendaVisitasV2: React.FC = () => {
               .sort((a, b) => a.ordem - b.ordem);
             const ativas = visitasDoDia.filter(v => v.status !== "cancelada").length;
             const incompleto = ativas < VISITAS_OBRIGATORIAS;
+            const roteirizaveis = roteirizaveisDe(diaISO);
             return (
               <div
                 key={diaISO}
@@ -219,10 +284,30 @@ const AgendaVisitasV2: React.FC = () => {
                   <span className="text-sm font-semibold">
                     {DIAS_SEMANA[dia.getDay()]} {String(dia.getDate()).padStart(2, "0")}
                   </span>
-                  <span className={`text-[10px] ${incompleto ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
-                    {ativas}/{VISITAS_MAX}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {roteirizaveis.length >= 2 && (
+                      <button
+                        onClick={() => roteirizarDia(diaISO)}
+                        disabled={roteirizando === diaISO}
+                        title={`Roteirizar as ${roteirizaveis.length} visitas deste dia a partir da sua localização`}
+                        className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 disabled:opacity-60"
+                      >
+                        {roteirizando === diaISO
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <Route size={11} />}
+                        Roteirizar ({roteirizaveis.length})
+                      </button>
+                    )}
+                    <span className={`text-[10px] ${incompleto ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
+                      {ativas}/{VISITAS_MAX}
+                    </span>
+                  </div>
                 </div>
+                {roteirizaveis.length > MAX_PARADAS_ROTA && (
+                  <p className="text-[10px] text-amber-600 px-1 mb-1">
+                    ⚠️ Google Maps aceita máx. {MAX_PARADAS_ROTA} paradas — a rota usará as {MAX_PARADAS_ROTA} mais próximas
+                  </p>
+                )}
                 <div className="space-y-2 flex-1">
                   {visitasDoDia.map(v => (
                     <VisitaCard
@@ -230,6 +315,7 @@ const AgendaVisitasV2: React.FC = () => {
                       visita={v}
                       nome={v.prospeccao && v.nome_prospeccao ? v.nome_prospeccao : nomeDe(v.cod_cliente)}
                       diasSemCompra={diasSemCompraMap[v.cod_cliente]}
+                      loc={locClientes[v.cod_cliente]}
                       editable={editable}
                       onRealizar={() => setRealizarVisita(v)}
                       onDetalhes={() => setRealizarVisita(v)}
