@@ -2,15 +2,18 @@ import React from "react";
 import { Cliente } from "@/lib/types";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL } from "@/lib/format";
+import { VendasForaCarteira } from "@/lib/supabaseService";
 import StatusBadge from "./StatusBadge";
 import { AlertTriangle, Users, XCircle } from "lucide-react";
 
 interface Props {
   clientes: Cliente[];
   mesesNoPeriodo: number;
+  /** Vendas do vendedor selecionado para clientes fora do AGC ativo */
+  vendasFora?: VendasForaCarteira | null;
 }
 
-const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo }) => {
+const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo, vendasFora }) => {
   const { vendedores } = useEmpresa();
   const meses = Math.max(1, mesesNoPeriodo);
   const vendedorStats = vendedores.map(v => {
@@ -87,6 +90,30 @@ const VisaoGeral: React.FC<Props> = ({ clientes, mesesNoPeriodo }) => {
               </tr>
             ))}
           </tbody>
+          {vendasFora && vendasFora.clientes > 0 && (
+            <tfoot>
+              <tr className="bg-muted/40 border-t-2">
+                <td className="px-3 py-2">
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                    📦 Fora da carteira
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-right text-muted-foreground">{vendasFora.clientes}</td>
+                <td className="px-3 py-2 text-right text-muted-foreground">{vendasFora.totalPedidos} ped.</td>
+                <td colSpan={3}></td>
+                <td className="px-3 py-2 text-right font-medium text-muted-foreground">{fmtBRL(vendasFora.totalValor)}</td>
+                <td></td>
+              </tr>
+              <tr className="border-t font-semibold">
+                <td className="px-3 py-2">Total</td>
+                <td colSpan={5}></td>
+                <td className="px-3 py-2 text-right">
+                  {fmtBRL(vendedorStats.reduce((s, v) => s + v.fatTotal, 0) + vendasFora.totalValor)}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

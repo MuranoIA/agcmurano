@@ -172,6 +172,120 @@ export async function fetchClientesRCA(): Promise<Record<string, ClienteRCAInfo>
   return info;
 }
 
+// ---- VENDAS FORA DA CARTEIRA ----
+// A view vw_grandes_contas só traz clientes com grandes_contas.ativo = true. Quem
+// saiu da carteira (ou nunca entrou) some do dashboard, mas o vendedor fez a venda
+// e o valor precisa ser contabilizado. Aqui buscamos direto em faturamento por
+// codusr (RCA do vendedor) e descontamos o que já está na carteira ativa.
+
+export interface VendaOrfa {
+  codcli: number;
+  cliente: string | null;
+  pedido: number;
+  vlr_atendido: number;
+  tipo: string | null;
+  datafat: string | null;
+  posicao: string | null;
+}
+
+export interface VendasForaCarteira {
+  totalValor: number;
+  totalPedidos: number;
+  clientes: number;
+  detalhes: VendaOrfa[];
+}
+
+export const VENDAS_FORA_CARTEIRA_VAZIO: VendasForaCarteira = {
+  totalValor: 0, totalPedidos: 0, clientes: 0, detalhes: [],
+};
+
+/** Posições consideradas quando o chamador não passa as suas. */
+export const POSICOES_FORA_CARTEIRA = ["F - Faturado", "L - Liberado", "DEV - Devolucao"];
+
+/** Códigos RCA (faturamento.codusr) mapeados para um vendedor do AGC. */
+export async function fetchRCAsDoVendedor(vendedorAGC: string): Promise<number[]> {
+  const alvo = normalizeVendedor(vendedorAGC);
+  if (!alvo) return [];
+  const { data, error } = await externalSupabase
+    .from("mapeamento_rca")
+    .select("rca_codigo, vendedor_agc")
+    .eq("ativo", true);
+  if (error) throw error;
+  return (data || [])
+    .filter(m => normalizeVendedor(m.vendedor_agc) === alvo)
+    .map(m => Number(m.rca_codigo))
+    .filter(n => Number.isFinite(n));
+}
+
+/**
+ * Vendas do vendedor (por codusr) no período para clientes que NÃO estão no AGC ativo.
+ * `dataInicio`/`dataFim` em YYYY-MM-DD — comparados com faturamento.datafat, a mesma
+ * coluna que a view usa como `data`, então o recorte bate com o resto do dashboard.
+ */
+export async function fetchVendasForaDaCarteira(
+  vendedorAGC: string,
+  dataInicio: string,
+  dataFim: string,
+  posicoes: string[] = POSICOES_FORA_CARTEIRA,
+): Promise<VendasForaCarteira> {
+  if (!vendedorAGC || posicoes.length === 0) return VENDAS_FORA_CARTEIRA_VAZIO;
+
+  const rcas = await fetchRCAsDoVendedor(vendedorAGC);
+  if (rcas.length === 0) return VENDAS_FORA_CARTEIRA_VAZIO;
+
+  const vendas: VendaOrfa[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await externalSupabase
+      .from("faturamento")
+      .select("codcli, cliente, pedido, vlr_atendido, tipo, datafat, posicao")
+      .in("codusr", rcas)
+      .gte("datafat", dataInicio)
+      .lte("datafat", dataFim)
+      .in("posicao", posicoes)
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    vendas.push(...(data as any[]).map(v => ({
+      codcli: Number(v.codcli),
+      cliente: v.cliente,
+      pedido: Number(v.pedido),
+      vlr_atendido: Number(v.vlr_atendido) || 0,
+      tipo: v.tipo,
+      datafat: v.datafat,
+      posicao: v.posicao,
+    })));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  if (vendas.length === 0) return VENDAS_FORA_CARTEIRA_VAZIO;
+
+  // Quais desses clientes estão na carteira ativa (esses já contam no dashboard)
+  const codigos = [...new Set(vendas.map(v => v.codcli))];
+  const naCarteira = new Set<number>();
+  for (let i = 0; i < codigos.length; i += 200) {
+    const { data, error } = await externalSupabase
+      .from("grandes_contas")
+      .select("cod_cliente")
+      .eq("ativo", true)
+      .in("cod_cliente", codigos.slice(i, i + 200));
+    if (error) throw error;
+    (data || []).forEach(r => naCarteira.add(Number(r.cod_cliente)));
+  }
+
+  const orfas = vendas.filter(v => !naCarteira.has(v.codcli));
+  const ehVenda = (v: VendaOrfa) => String(v.tipo || "").toUpperCase() === "VENDA";
+
+  return {
+    totalValor: orfas.reduce((s, v) => s + (ehVenda(v) ? v.vlr_atendido : -v.vlr_atendido), 0),
+    totalPedidos: new Set(orfas.filter(ehVenda).map(v => v.pedido)).size,
+    clientes: new Set(orfas.map(v => v.codcli)).size,
+    detalhes: orfas,
+  };
+}
+
 export async function fetchPedidosFromDB(empresa: string = "Grandes Contas"): Promise<{ clientes: Cliente[]; mesesCols: string[]; pedidos: Pedido[] }> {
   const pedidos = await fetchPedidosRawFromDB(empresa);
   if (pedidos.length === 0) return { clientes: [], mesesCols: [], pedidos: [] };

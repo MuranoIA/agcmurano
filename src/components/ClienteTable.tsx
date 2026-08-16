@@ -3,6 +3,7 @@ import { Cliente } from "@/lib/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { fmtBRL, fmtBRLShort } from "@/lib/format";
+import { VendasForaCarteira } from "@/lib/supabaseService";
 import StatusBadge from "./StatusBadge";
 import TagRCA2 from "./TagRCA2";
 import ModalCadastrarLocalizacao from "./ModalCadastrarLocalizacao";
@@ -11,11 +12,13 @@ import { ArrowUpDown } from "lucide-react";
 interface Props {
   clientes: Cliente[];
   onSelect: (c: Cliente) => void;
+  /** Vendas do vendedor para clientes que saíram do AGC — resumo no rodapé */
+  vendasFora?: VendasForaCarteira | null;
 }
 
 type SortKey = keyof Cliente | "lastMonth";
 
-const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
+const ClienteTable: React.FC<Props> = ({ clientes, onSelect, vendasFora }) => {
   const { mesesCols, setVendedor, rcaInfo, clientesComLocalizacao } = useAppData();
   const { vendedores } = useEmpresa();
   const lastMonth = mesesCols[mesesCols.length - 1] || "";
@@ -123,6 +126,28 @@ const ClienteTable: React.FC<Props> = ({ clientes, onSelect }) => {
             </tr>
           ))}
         </tbody>
+        {vendasFora && vendasFora.clientes > 0 && (
+          <tfoot>
+            <tr className="bg-muted/40 border-t-2">
+              <td colSpan={headers.length - 1} className="px-3 py-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                    📦 Fora da carteira
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {vendasFora.clientes} cliente(s) · {vendasFora.totalPedidos} pedido(s) — vendas do
+                    vendedor para clientes que não estão no AGC ativo
+                  </span>
+                </div>
+              </td>
+              <td className="px-3 py-3 text-right">
+                <span className="text-sm font-semibold text-muted-foreground">
+                  {fmtBRL(vendasFora.totalValor)}
+                </span>
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </table>
 
       {cadastroLoc && (

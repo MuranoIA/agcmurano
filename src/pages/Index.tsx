@@ -18,9 +18,12 @@ import ClientePanel from "@/components/ClientePanel";
 import ConsultaClientes, { ClienteBusca, nomeRCA } from "@/components/ConsultaClientes";
 import NovoClienteModal from "@/components/NovoClienteModal";
 import PendenciasAGC from "@/components/PendenciasAGC";
+import InadimplenciaAGC from "@/components/InadimplenciaAGC";
 import ConfigMetas from "@/components/ConfigMetas";
 import TendenciaMeta from "@/components/TendenciaMeta";
 import { countAlertasPendentes } from "@/lib/alertasService";
+import { countInadimplencia } from "@/lib/inadimplenciaService";
+import { VendasForaCarteira, fetchVendasForaDaCarteira } from "@/lib/supabaseService";
 import { Cliente } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadFile, exportCSV, fmtBRL } from "@/lib/format";
@@ -29,9 +32,13 @@ import { Download, Loader2, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 
+/** Date -> "YYYY-MM-DD" no fuso local (faturamento.datafat é date, não timestamp) */
+const ymd = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 const Dashboard: React.FC = () => {
   const appData = useAppData();
-  const { role, user } = useAuth();
+  const { role, user, vendorName } = useAuth();
   const { permissions } = usePermissions();
   const isVendedorRestrito = permissions?.role === "vendedor";
   const isGestor = permissions?.role === "gestor" || role === "admin";
@@ -60,6 +67,18 @@ const Dashboard: React.FC = () => {
   const [pendenciasCount, setPendenciasCount] = useState(0);
   const [showConfigMetas, setShowConfigMetas] = useState(false);
   const [metasVersion, setMetasVersion] = useState(0);
+  const [inadimplenciaCount, setInadimplenciaCount] = useState(0);
+  const [vendasFora, setVendasFora] = useState<VendasForaCarteira | null>(null);
+
+  /**
+   * Vendedor efetivo: quem tem acesso restrito enxerga apenas a própria carteira,
+   * independentemente do botão de filtro. Vazio = "Todos".
+   */
+  const vendedorEfetivo = useMemo(() => {
+    const restrito = permissions?.vendedor_filtro?.trim() || (role === "vendedor" ? vendorName : "") || "";
+    if (restrito) return restrito;
+    return vendedor !== "Todos" ? vendedor : "";
+  }, [permissions?.vendedor_filtro, role, vendorName, vendedor]);
 
   // Contagem de pendências (badge) — só pra gestores, atualiza a cada 60s
   useEffect(() => {
@@ -72,6 +91,20 @@ const Dashboard: React.FC = () => {
     const interval = setInterval(refresh, 60000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [isGestor]);
+
+  // Contagem de boletos vencidos (badge) — o serviço cacheia por 5 min, então
+  // o intervalo apenas renova o cache expirado.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      countInadimplencia(vendedorEfetivo || undefined)
+        .then(n => { if (!cancelled) setInadimplenciaCount(n); })
+        .catch(() => {});
+    };
+    refresh();
+    const interval = setInterval(refresh, 300000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [vendedorEfetivo]);
 
   // Reset filters/tab when empresa changes (avoid stuck state on hidden tab or invalid vendor)
   useEffect(() => {
@@ -114,6 +147,29 @@ const Dashboard: React.FC = () => {
     }
     return list;
   }, [clientesInterior, intVendedor, intStatus, intBusca]);
+
+  /**
+   * Vendas fora da carteira só fazem sentido com um vendedor definido e sem os
+   * demais filtros ativos — status/busca/região recortam a carteira, e o total
+   * de fora dela não tem como acompanhar esse recorte.
+   */
+  const posicoesSelecionadas = useMemo(
+    () => Object.entries(posicoesAtivas).filter(([, ativo]) => ativo).map(([p]) => p),
+    [posicoesAtivas],
+  );
+  const podeMostrarFora = !!vendedorEfetivo && status === "Todos" && !busca && regiao === "Todos";
+
+  useEffect(() => {
+    if (!podeMostrarFora || !periodFrom || !periodTo) { setVendasFora(null); return; }
+    let cancelled = false;
+    fetchVendasForaDaCarteira(vendedorEfetivo, ymd(periodFrom), ymd(periodTo), posicoesSelecionadas)
+      .then(r => { if (!cancelled) setVendasFora(r); })
+      .catch(err => {
+        console.error("Erro ao buscar vendas fora da carteira:", err);
+        if (!cancelled) setVendasFora(null);
+      });
+    return () => { cancelled = true; };
+  }, [podeMostrarFora, vendedorEfetivo, periodFrom, periodTo, posicoesSelecionadas]);
 
   const handleNewUpload = useCallback(() => {}, []);
 
@@ -194,16 +250,22 @@ const Dashboard: React.FC = () => {
                 <button onClick={() => setSomenteVendasProprias(false)} className="underline">Mostrar todas</button>
               </div>
             )}
-            <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
-            <TendenciaMeta
-              clientes={filtered}
-              periodFrom={periodFrom}
-              periodTo={periodTo}
-              isGestor={isGestor}
-              refreshKey={metasVersion}
-            />
+            {activeTab !== "inadimplencia" && (
+              <>
+                <KPIBar clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} vendasFora={vendasFora} />
+                <TendenciaMeta
+                  clientes={filtered}
+                  periodFrom={periodFrom}
+                  periodTo={periodTo}
+                  isGestor={isGestor}
+                  refreshKey={metasVersion}
+                />
+              </>
+            )}
             <Filters vendedor={vendedor} setVendedor={setVendedor} regiao={regiao} setRegiao={setRegiao} status={status} setStatus={setStatus} busca={busca} setBusca={setBusca} somenteVendasProprias={somenteVendasProprias} setSomenteVendasProprias={setSomenteVendasProprias} posicoesAtivas={posicoesAtivas} setPosicoesAtivas={setPosicoesAtivas} />
-            <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
+            {activeTab !== "inadimplencia" && (
+              <PeriodFilter from={periodFrom} to={periodTo} onFromChange={setPeriodFrom} onToChange={setPeriodTo} onReset={resetPeriod} />
+            )}
           </>
         )}
 
@@ -216,6 +278,14 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="agenda">Agenda de Visitas</TabsTrigger>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
               <TabsTrigger value="consulta">Consulta</TabsTrigger>
+              <TabsTrigger value="inadimplencia">
+                Inadimplência
+                {inadimplenciaCount > 0 && (
+                  <span className="ml-1.5 text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full leading-none">
+                    {inadimplenciaCount}
+                  </span>
+                )}
+              </TabsTrigger>
               {!isVendedorRestrito && <TabsTrigger value="registro">Relatório de Visitas</TabsTrigger>}
               {isGestor && (
                 <TabsTrigger value="pendencias">
@@ -236,7 +306,7 @@ const Dashboard: React.FC = () => {
 
           {role === "admin" && (
             <TabsContent value="visao">
-              <VisaoGeral clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} />
+              <VisaoGeral clientes={filtered} mesesNoPeriodo={mesesNoPeriodo} vendasFora={vendasFora} />
             </TabsContent>
           )}
 
@@ -248,7 +318,7 @@ const Dashboard: React.FC = () => {
                 </Button>
               </div>
             )}
-            <ClienteTable clientes={filtered} onSelect={setSelectedCliente} />
+            <ClienteTable clientes={filtered} onSelect={setSelectedCliente} vendasFora={vendasFora} />
           </TabsContent>
           <TabsContent value="heatmap">
             <HeatmapTable clientes={filtered} mesesCols={mesesCols} />
@@ -261,6 +331,9 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="consulta">
             <ConsultaClientes onSelectCliente={abrirClienteDaConsulta} />
+          </TabsContent>
+          <TabsContent value="inadimplencia">
+            <InadimplenciaAGC vendedorFiltro={vendedorEfetivo || undefined} />
           </TabsContent>
           {!isVendedorRestrito && (
             <TabsContent value="registro">

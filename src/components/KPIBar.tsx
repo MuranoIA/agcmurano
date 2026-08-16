@@ -1,13 +1,23 @@
 import React, { useMemo } from "react";
 import { fmtBRL } from "@/lib/format";
 import { Cliente } from "@/lib/types";
+import { VendasForaCarteira } from "@/lib/supabaseService";
 
 interface KPIBarProps {
   clientes: Cliente[];
   mesesNoPeriodo: number;
+  /** Vendas para clientes fora do AGC ativo — entram só no card de faturamento */
+  vendasFora?: VendasForaCarteira | null;
 }
 
-const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesNoPeriodo }) => {
+interface Card {
+  label: string;
+  value: string;
+  cls: string;
+  hint?: string;
+}
+
+const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesNoPeriodo, vendasFora }) => {
   const total = clientes.length;
   const meses = Math.max(1, mesesNoPeriodo);
 
@@ -65,16 +75,26 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesNoPeriodo }) => {
 
   const fmtPct = (v: number) => `${v.toFixed(1)}%`;
 
-  const row1 = [
+  // O faturamento exibido soma as vendas fora da carteira; as métricas derivadas
+  // (TM/Mês, % realizado) continuam sobre a carteira, que é a base de comparação.
+  const foraValor = vendasFora?.totalValor ?? 0;
+  const fatExibido = fatTotal + foraValor;
+
+  const row1: Card[] = [
     { label: "Clientes", value: String(total), cls: "" },
-    { label: "Fat. Período", value: fmtBRL(fatTotal), cls: "" },
+    {
+      label: "Fat. Período",
+      value: fmtBRL(fatExibido),
+      cls: "",
+      hint: foraValor > 0 ? `inclui ${fmtBRL(foraValor)} fora da carteira` : undefined,
+    },
     { label: "TM/Mês médio", value: fmtBRL(tmMesAvg), cls: "" },
     { label: "Ativos", value: String(ativos), cls: "badge-active" },
     { label: "Risco", value: String(risco), cls: "badge-risk" },
     { label: "Inativos", value: String(inativos), cls: "badge-inactive" },
   ];
 
-  const row2 = [
+  const row2: Card[] = [
     { label: "Positivados", value: String(positivados), cls: "text-primary font-bold" },
     { label: "TM/Mês Posit.", value: fmtBRL(tmPosAvg), cls: "" },
     { label: "% Real. vs TM", value: fmtPct(pctRealizadoTMGeral), cls: pctRealizadoTMGeral >= 100 ? "text-green-600" : "text-yellow-600" },
@@ -86,12 +106,13 @@ const KPIBar: React.FC<KPIBarProps> = ({ clientes, mesesNoPeriodo }) => {
     { label: "< Obj.", value: String(abaixoObj), cls: "text-yellow-600 font-bold" },
   ];
 
-  const renderRow = (cards: typeof row1, cols: string) => (
+  const renderRow = (cards: Card[], cols: string) => (
     <div className={`grid ${cols} gap-3`}>
       {cards.map(c => (
         <div key={c.label} className="bg-card rounded-lg shadow-sm border p-3 text-center">
           <div className="text-xs text-muted-foreground mb-1">{c.label}</div>
           <div className={`text-lg font-semibold ${c.cls}`}>{c.value}</div>
+          {c.hint && <div className="text-[10px] text-muted-foreground/70 mt-0.5">{c.hint}</div>}
         </div>
       ))}
     </div>
