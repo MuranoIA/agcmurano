@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import BotaoMicrofone from "./BotaoMicrofone";
+import { useDitadoVoz } from "@/hooks/useDitadoVoz";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClienteDetalhe, errMsgCliente } from "@/lib/clienteDetalheService";
 import {
@@ -38,6 +40,8 @@ const DossieCliente: React.FC<Props> = ({ codCliente, nomeCliente, detalhe, carr
 
   const [dossieGerado, setDossieGerado] = useState("");
   const [gerandoDossie, setGerandoDossie] = useState(false);
+
+  const ditado = useDitadoVoz({ valor: notas, onChange: setNotas, onErro: msg => toast.error(msg) });
 
   useEffect(() => {
     let cancelado = false;
@@ -131,14 +135,18 @@ const DossieCliente: React.FC<Props> = ({ codCliente, nomeCliente, detalhe, carr
 
         <div>
           <label className="text-xs text-muted-foreground" htmlFor="dossie-notas">Notas sobre o cliente:</label>
-          <textarea
-            id="dossie-notas"
-            value={notas}
-            onChange={e => setNotas(e.target.value)}
-            rows={3}
-            placeholder="Ex: Prefere atendimento à tarde, salão grande com 4 cadeiras, gosta de lançamentos..."
-            className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-card"
-          />
+          <div className="flex items-start gap-2 mt-1">
+            <textarea
+              id="dossie-notas"
+              value={notas}
+              onChange={e => setNotas(e.target.value)}
+              rows={3}
+              placeholder="Ex: Prefere atendimento à tarde, salão grande com 4 cadeiras, gosta de lançamentos..."
+              className="flex-1 border rounded-lg px-3 py-2 text-sm bg-card"
+            />
+            {ditado.suportado && <BotaoMicrofone gravando={ditado.gravando} onClick={ditado.alternar} />}
+          </div>
+          {ditado.gravando && <p className="text-[11px] text-red-600 mt-1">🔴 Gravando... fale e clique de novo para parar.</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

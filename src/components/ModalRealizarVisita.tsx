@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import BotaoMicrofone from "./BotaoMicrofone";
+import { useDitadoVoz } from "@/hooks/useDitadoVoz";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -54,6 +56,9 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
   const [novaData, setNovaData] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const ditado = useDitadoVoz({ valor: obs, onChange: setObs, onErro: msg => toast.error(msg) });
+  const { parar: pararDitado } = ditado;
+
   // --- Localização ---
   const [checkinFeito, setCheckinFeito] = useState(false);
   const [carregandoGeo, setCarregandoGeo] = useState(false);
@@ -87,6 +92,11 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
     setCoordsExtraidas(null);
     setSolicitado(false);
   }, [open, visita]);
+
+  // O modal continua montado com o diálogo fechado — sem isso o microfone ficaria ligado.
+  useEffect(() => {
+    if (!open) pararDitado();
+  }, [open, pararDitado]);
 
   if (!visita) return null;
 
@@ -445,13 +455,18 @@ const ModalRealizarVisita: React.FC<Props> = ({ open, onOpenChange, visita, nome
 
           <div>
             <Label htmlFor="obs">Observação (opcional)</Label>
-            <Textarea
-              id="obs"
-              rows={2}
-              value={obs}
-              onChange={e => setObs(e.target.value)}
-              placeholder="Anotações..."
-            />
+            <div className="flex items-start gap-2">
+              <Textarea
+                id="obs"
+                rows={2}
+                value={obs}
+                onChange={e => setObs(e.target.value)}
+                placeholder="Anotações..."
+                className="flex-1"
+              />
+              {ditado.suportado && <BotaoMicrofone gravando={ditado.gravando} onClick={ditado.alternar} />}
+            </div>
+            {ditado.gravando && <p className="text-[11px] text-red-600 mt-1">🔴 Gravando... fale e clique de novo para parar.</p>}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
