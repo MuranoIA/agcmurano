@@ -9,6 +9,7 @@ import TagRCA2 from "./TagRCA2";
 import ClienteRankings from "./ClienteRankings";
 import ClientePedidos from "./ClientePedidos";
 import PagamentosCliente from "./PagamentosCliente";
+import DossieCliente from "./DossieCliente";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +65,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
 
   const [detalhe, setDetalhe] = useState<ClienteDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
-  const [abaModal, setAbaModal] = useState<"resumo" | "pagamentos">("resumo");
+  const [abaModal, setAbaModal] = useState<"resumo" | "pagamentos" | "dossie">("resumo");
 
   const codCliente = Number(c.Codigo);
 
@@ -211,7 +212,7 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
         <div className="p-4 sm:p-6">
           {/* ============ ABAS ============ */}
           <div className="flex border-b mb-4">
-            {([["resumo", "Resumo"], ["pagamentos", "Pagamentos"]] as const).map(([id, label]) => (
+            {([["resumo", "Resumo"], ["pagamentos", "Pagamentos"], ["dossie", "🧠 Dossiê"]] as const).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -226,6 +227,15 @@ const ClientePanel: React.FC<Props> = ({ cliente: c, onClose }) => {
               </button>
             ))}
           </div>
+
+          {abaModal === "dossie" && (
+            <DossieCliente
+              codCliente={codCliente}
+              nomeCliente={c.Nome}
+              detalhe={detalhe}
+              carregandoDetalhe={carregando}
+            />
+          )}
 
           {abaModal === "pagamentos" && (
             carregando ? (
