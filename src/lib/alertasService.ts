@@ -146,7 +146,7 @@ export async function countAlertasPendentes(): Promise<number> {
 }
 
 // Aprovar alerta (cliente fica no AGC)
-export async function aprovarAlerta(id: number, usuario: string, codCliente: number): Promise<void> {
+export async function aprovarAlerta(id: number, usuario: string, codCliente: number, vendedorRca: string): Promise<void> {
   const { error } = await externalSupabase
     .from("alertas_agc")
     .update({
@@ -156,6 +156,17 @@ export async function aprovarAlerta(id: number, usuario: string, codCliente: num
     })
     .eq("id", id);
   if (error) throw error;
+
+  // Garantir que o cliente esteja ativo no grandes_contas (entrada ou reentrada)
+  const { error: gcErr } = await externalSupabase.from("grandes_contas").upsert({
+    cod_cliente: codCliente,
+    vendedor: vendedorRca,
+    regiao: "capital",
+    ativo: true,
+    aprovado_em: new Date().toISOString(),
+    aprovado_por: usuario,
+  }, { onConflict: "cod_cliente,vendedor" });
+  if (gcErr) throw gcErr;
 
   // Registrar no histórico — diferenciando entrada normal de reentrada
   const reentrada = await verificarReentrada(codCliente);
@@ -365,4 +376,13 @@ export async function fetchVendedoresAGC(): Promise<string[]> {
   return [...new Set(data.map(m => m.vendedor_agc).filter(Boolean))];
 }
 
-export const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+export const errMsg = (e: unknown): string => {
+  if (e instanceof Error) return e.message;
+  // erros do Supabase são objetos simples — String(e) viraria "[object Object]"
+  if (e && typeof e === "object") {
+    const msg = (e as { message?: unknown }).message;
+    if (typeof msg === "string" && msg) return msg;
+    try { return JSON.stringify(e); } catch { return String(e); }
+  }
+  return String(e);
+};

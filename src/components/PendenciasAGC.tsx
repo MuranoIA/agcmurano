@@ -229,7 +229,7 @@ const PendenciasAGC: React.FC<Props> = ({ isGestor, usuario, onPendenciasChange 
   const handleAprovar = async (alerta: AlertaAGC) => {
     setActionId(alerta.id);
     try {
-      await aprovarAlerta(alerta.id, usuario, alerta.cod_cliente);
+      await aprovarAlerta(alerta.id, usuario, alerta.cod_cliente, alerta.vendedor_rca);
       toast.success(
         alerta.reentrada
           ? `${alerta.nome_cliente} reaprovado no AGC (reentrada registrada no log).`
