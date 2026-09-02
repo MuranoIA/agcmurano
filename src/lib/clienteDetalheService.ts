@@ -71,7 +71,7 @@ const num = (v: unknown): number => Number(v) || 0;
  */
 export async function fetchClienteCompleto(codCliente: number): Promise<ClienteDetalhe> {
   const [cliente, ranking, itens, pedidos] = await Promise.all([
-    externalSupabase
+    Promise.resolve(externalSupabase
       .from("clientes")
       .select("codcli, cliente, cpf_cnpj, endereco, bairro, cidade, estado, cep, telefone, email, rca_vendedor, rca2_vendedor, ramo, familia, ativo, lat_cliente, lng_cliente")
       .eq("codcli", codCliente)
@@ -83,10 +83,10 @@ export async function fetchClienteCompleto(codCliente: number): Promise<ClienteD
           lat_cliente: data.lat_cliente == null ? null : num(data.lat_cliente),
           lng_cliente: data.lng_cliente == null ? null : num(data.lng_cliente),
         } as ClienteCadastro;
-      })
+      }))
       .catch(() => null),
 
-    externalSupabase
+    Promise.resolve(externalSupabase
       .rpc("get_cliente_ranking", { p_codcli: codCliente })
       .then(({ data }) => {
         const row = Array.isArray(data) ? data[0] : data;
@@ -96,10 +96,10 @@ export async function fetchClienteCompleto(codCliente: number): Promise<ClienteD
           total_clientes: num(row.total_clientes),
           faturamento_liquido: num(row.faturamento_liquido),
         } as RankingCliente;
-      })
+      }))
       .catch(() => null),
 
-    externalSupabase
+    Promise.resolve(externalSupabase
       .from("itens")
       .select("departamento, produto, codprod, quantidade, vlr_item")
       .eq("codcli", codCliente)
@@ -110,10 +110,10 @@ export async function fetchClienteCompleto(codCliente: number): Promise<ClienteD
         codprod: i.codprod,
         quantidade: num(i.quantidade),
         vlr_item: num(i.vlr_item),
-      })))
+      }))))
       .catch(() => [] as ItemCliente[]),
 
-    externalSupabase
+    Promise.resolve(externalSupabase
       .from("faturamento")
       .select("id, pedido, data_fat, data_emissao, vlr_atendido, tipo, posicao")
       .eq("codcli", codCliente)
@@ -127,7 +127,7 @@ export async function fetchClienteCompleto(codCliente: number): Promise<ClienteD
         vlr_atendido: num(p.vlr_atendido),
         tipo: p.tipo,
         posicao: p.posicao,
-      })))
+      }))))
       .catch(() => [] as PedidoCliente[]),
   ]);
 

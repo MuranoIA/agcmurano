@@ -88,8 +88,9 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
       nome: r.nome,
       vendedor: normalizeVendedor(r.vendedor),
       valor: Number(r.valor) || 0,
-      // data nula = cliente do AGC sem faturamento; vira Data inválida (não epoch)
-      data: r.data ? new Date(r.data) : new Date(NaN),
+      // data nula = cliente do AGC sem faturamento; vira Data inválida (não epoch).
+      // parsePedidoDate evita o deslocamento de fuso (YYYY-MM-DD em UTC viraria o dia anterior).
+      data: r.data ? parsePedidoDate(String(r.data)) : new Date(NaN),
       tipo,
       regiao: r.regiao || "capital",
       venda_propria: r.venda_propria === true,
