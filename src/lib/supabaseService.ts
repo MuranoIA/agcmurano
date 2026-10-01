@@ -79,9 +79,23 @@ export async function fetchPedidosRawFromDB(_empresa: string = "Grandes Contas")
     from += pageSize;
   }
 
-  return allRows.map(r => {
+  // Regra de faturamento: soma VENDA/MANIFESTO/BONIFICAÇÃO, subtrai DEV; VENDA CONSIGNADA e
+  // SIMPLES FATURA não contam. Só posições finais (cancelado, bloqueado etc. ficam de fora).
+  const TIPOS_VENDA = new Set(["VENDA", "VENDA DE MANIFESTO", "SIMPLES REMESSA MANIFESTO", "BONIFICAÇÃO", "BONIFICACAO"]);
+  const TIPOS_DEV = new Set(["DEV", "DEVOLUCAO"]);
+  const POSICOES_VALIDAS = new Set(POSICOES_FORA_CARTEIRA.map(p => p.toUpperCase()));
+
+  return allRows
+    .filter(r => {
+      // data nula = cliente do AGC sem faturamento (linha placeholder) — mantém pra não sumir da carteira
+      if (!r.data) return true;
+      const tipoRaw = String(r.tipo || "").toUpperCase();
+      const posRaw = String(r.posicao || "").toUpperCase();
+      return (TIPOS_VENDA.has(tipoRaw) || TIPOS_DEV.has(tipoRaw)) && POSICOES_VALIDAS.has(posRaw);
+    })
+    .map(r => {
     const tipoRaw = String(r.tipo || "").toUpperCase();
-    const tipo: "VENDA" | "DEV" = tipoRaw === "DEVOLUCAO" || tipoRaw === "DEV" ? "DEV" : "VENDA";
+    const tipo: "VENDA" | "DEV" = TIPOS_DEV.has(tipoRaw) ? "DEV" : "VENDA";
     return {
       pedido: String(r.pedido),
       codCliente: String(r.cod_cliente),
