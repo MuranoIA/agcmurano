@@ -80,3 +80,17 @@
     background: hsl(var(--status-inactive-bg));
   }
 }
+
+/* Dentro do hub (iframe): quem rola é o <body>, não a página. No iPhone, a página que rola dentro
+   de um iframe deixa a barra `sticky` do topo sumir na primeira rolagem (visto no VendasPro em
+   20/10/2026). Com o body como área de rolagem, a barra fica presa. Aberto direto, nada muda.
+   `position: fixed` continua preso à tela: overflow não muda o bloco de referência dele. */
+html[data-embutido="hub"] {
+  height: 100%;
+  overflow: hidden;
+}
+html[data-embutido="hub"] body {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

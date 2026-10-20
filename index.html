@@ -24,6 +24,9 @@
     <meta name="apple-mobile-web-app-title" content="AGC" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <!-- Dentro do iframe do hub, o <html> e marcado antes da primeira pintura: o index.css passa a
+         rolagem para o <body> (barra do topo presa no iPhone). -->
+    <script>try{if(window.self!==window.top)document.documentElement.dataset.embutido='hub'}catch(e){document.documentElement.dataset.embutido='hub'}</script>
   </head>
 
   <body>
