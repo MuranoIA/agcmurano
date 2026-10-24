@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 const Login: React.FC = () => {
-  const { signIn } = useAuth();
+  const { signIn, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +19,7 @@ const Login: React.FC = () => {
     setLoading(true);
     const err = await signIn(email, password);
     if (err) {
-      setError("E-mail ou senha inválidos. Tente novamente.");
+      setError(err.startsWith("Não foi possível conectar") ? err : "E-mail ou senha inválidos. Tente novamente.");
     }
     setLoading(false);
   };
@@ -55,7 +55,7 @@ const Login: React.FC = () => {
                 required
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {(error || authError) && <p className="text-sm text-destructive">{error || authError}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
               Entrar
