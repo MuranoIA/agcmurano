@@ -13,8 +13,8 @@ Leia também `REGRAS.md` (regras de negócio) antes de mexer em cálculos, statu
 - **Publicação automática a partir da `main`: merge na `main` = produção.** Nunca fazer merge sem decisão explícita do Murano.
 - Dois bancos Supabase na VPS:
   - `supabase` (variáveis `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`, definidas no deploy) → stack **AGC** (`api-agc.muranoprofessional.com.br`): `clientes`, `overlay_*`, `user_roles`, `vendor_email_mapping`.
-  - `externalSupabase` (`src/integrations/supabase/externalClient.ts`, URL fixa) → stack **clientes** (`api-clientes.muranoprofessional.com.br`): views `vw_grandes_contas`, `vw_inteligencia_agenda`, tabelas `agenda_gc`, `grandes_contas`, `metas_agc`, `dias_uteis_agc`, `faturamento` etc., RPC `buscar_pagamentos`.
-- O `.env` do repositório está desatualizado (aponta para o Supabase antigo). Produção usa as variáveis do deploy.
+  - `externalSupabase` (`src/integrations/supabase/externalClient.ts`, variáveis `VITE_CLIENTES_SUPABASE_URL` / `VITE_CLIENTES_SUPABASE_KEY`) → stack **clientes** (`api-clientes.muranoprofessional.com.br`): views `vw_grandes_contas`, `vw_inteligencia_agenda`, tabelas `agenda_gc`, `grandes_contas`, `metas_agc`, `dias_uteis_agc`, `faturamento` etc., RPC `buscar_pagamentos`.
+- Nenhum `.env` é versionado. Em desenvolvimento, copie `.env.example` para `.env.local`. Produção usa as variáveis do deploy (`agc-oficial`). Sem `VITE_CLIENTES_SUPABASE_KEY` o app para com erro claro no carregamento.
 
 ## Fluxo de trabalho
 - Demandas são registradas no Café Code (projeto `agcmurano`), apenas para registro. Perguntas, abertura de PR e decisão de merge acontecem no chat com o Murano.
@@ -27,7 +27,7 @@ Leia também `REGRAS.md` (regras de negócio) antes de mexer em cálculos, statu
 - `src/test/helpers/supabaseFake.ts` simula o cliente Supabase (sem rede). Ver uso em `agendaService.test.ts`.
 
 ## Dívidas conhecidas (ordem combinada)
-1. Remover `.env` do git e a chave anon fixa em `externalClient.ts` (usar variável de ambiente); decidir se o repositório deve ser privado.
+1. ~~Remover `.env` do git e a chave anon fixa em `externalClient.ts`~~ (feito). A chave segue no histórico do git; decidir se o repositório deve ser privado.
 2. `buscar_pagamentos` é chamada uma vez por documento (~330 chamadas). Consolidar em uma consulta.
 3. Recálculo mensal (`AppDataContext.tsx`, chave `localStorage["ultimo_recalculo_mes"]`) roda no navegador de quem abre primeiro e faz um PATCH por cliente. Mover para uma única escrita em lote por um só ator.
 4. Upload de CSV (`upsertClientes`) apaga todos os clientes antes de gravar: usar upsert/transação.
