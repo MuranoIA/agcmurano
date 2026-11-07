@@ -1,5 +1,5 @@
 /* Service worker do AGC — cache do shell estático. Dados sempre vêm da rede. */
-const CACHE_NAME = 'agc-v3';
+const CACHE_NAME = 'agc-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -39,9 +39,15 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  // Checagem diária de versão (src/lib/autoUpdate.ts): sempre da rede, nunca guarda.
+  if (url.searchParams.has('verificar-versao')) return;
+
   // Network first: online sempre pega a versão nova; offline cai no cache.
+  // A página (navegação) vai com no-store: sem isso o navegador podia devolver o
+  // index.html antigo do cache HTTP e o AGC dentro do hub ficava na versão anterior.
+  const daRede = req.mode === 'navigate' ? fetch(req.url, { cache: 'no-store', credentials: 'same-origin' }) : fetch(req);
   event.respondWith(
-    fetch(req)
+    daRede
       .then((res) => {
         if (res && res.ok && res.type === 'basic') {
           const copia = res.clone();
