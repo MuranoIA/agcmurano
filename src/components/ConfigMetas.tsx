@@ -10,8 +10,17 @@ import {
   DiaUtil,
   errMsgMeta,
   fetchDiasUteis,
+  fetchEditoresJanela,
+  fetchJanelas,
   fetchMetas,
   gerarDiasMes,
+  JANELA_DIA_MAX,
+  JANELA_DIA_MIN,
+  JANELA_PADRAO,
+  JanelaTransferencia,
+  limiteDoMes,
+  removerExcecaoJanela,
+  salvarJanela,
   parseDiaLocal,
   toggleDiaUtil,
   toMesRef,
@@ -48,12 +57,29 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
   const [gerando, setGerando] = useState(false);
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
   const [motivo, setMotivo] = useState("");
+  const [janelas, setJanelas] = useState<JanelaTransferencia[]>([]);
+  const [diaPadrao, setDiaPadrao] = useState("");
+  const [diaExcecao, setDiaExcecao] = useState("");
+  const [salvandoJanela, setSalvandoJanela] = useState(false);
+  const [editoresJanela, setEditoresJanela] = useState<string[]>([]);
+  // Só quem está em agc_janela_editores vê e altera a janela (o banco também confere).
+  const podeEditarJanela = editoresJanela.includes(usuario.trim().toLowerCase());
 
   const carregar = useCallback(async (mes: string) => {
     setLoading(true);
     try {
-      const [d, m] = await Promise.all([fetchDiasUteis(mes), fetchMetas(mes)]);
+      const [d, m, j, ed] = await Promise.all([
+        fetchDiasUteis(mes),
+        fetchMetas(mes),
+        fetchJanelas(),
+        fetchEditoresJanela(),
+      ]);
       setDias(d);
+      setJanelas(j);
+      setEditoresJanela(ed);
+      setDiaPadrao(String(j.find(x => x.mes_referencia === JANELA_PADRAO)?.dia_limite ?? JANELA_DIA_MIN));
+      const exc = j.find(x => x.mes_referencia === mes);
+      setDiaExcecao(exc ? String(exc.dia_limite) : "");
       const mapa: Record<string, number> = {};
       m.forEach(x => { mapa[x.vendedor] = x.meta_valor; });
       setMetas(mapa);
@@ -134,6 +160,49 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
       setSalvando(false);
     }
   };
+
+  const janelaPadrao = janelas.find(j => j.mes_referencia === JANELA_PADRAO);
+  const janelaExcecao = janelas.find(j => j.mes_referencia === mesRef);
+  const limiteMes = limiteDoMes(janelas, mesRef);
+
+  const diaValido = (v: string): number | null => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= JANELA_DIA_MIN && n <= JANELA_DIA_MAX ? n : null;
+  };
+
+  const handleSalvarJanela = async (mes: string, valor: string) => {
+    const dia = diaValido(valor);
+    if (dia === null) {
+      toast.error(`Informe um dia entre ${JANELA_DIA_MIN} e ${JANELA_DIA_MAX}.`);
+      return;
+    }
+    setSalvandoJanela(true);
+    try {
+      await salvarJanela(mes, dia, usuario);
+      toast.success(mes === JANELA_PADRAO ? "Prazo padrão salvo." : `Prazo de ${mesLabel(mes)} salvo.`);
+      await carregar(mesRef);
+    } catch (err) {
+      toast.error("Erro ao salvar a janela: " + errMsgMeta(err));
+    } finally {
+      setSalvandoJanela(false);
+    }
+  };
+
+  const handleRemoverExcecao = async () => {
+    setSalvandoJanela(true);
+    try {
+      await removerExcecaoJanela(mesRef, usuario);
+      toast.success(`${mesLabel(mesRef)} volta a seguir o prazo padrão.`);
+      await carregar(mesRef);
+    } catch (err) {
+      toast.error("Erro ao remover a exceção: " + errMsgMeta(err));
+    } finally {
+      setSalvandoJanela(false);
+    }
+  };
+
+  const fmtAtualizacao = (j?: JanelaTransferencia) =>
+    j ? `alterado por ${j.atualizado_por || "—"} em ${new Date(j.atualizado_em).toLocaleString("pt-BR")}` : "";
 
   const totalMetas = vendedores.reduce((s, v) => s + (Number(metas[v]) || 0), 0);
 
@@ -235,6 +304,69 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
                 </>
               )}
             </section>
+
+            {/* ---------- PARTE C: JANELA DE TRANSFERÊNCIA ---------- */}
+            {podeEditarJanela && (
+            <section className="border-t pt-4 space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold">Janela de transferência da carteira</h4>
+                <p className="text-xs text-muted-foreground">
+                  Do dia 1 até o dia limite é possível incluir, remover ou trocar clientes de vendedor no AGC.
+                  Os dias 1 a {JANELA_DIA_MIN} ficam sempre abertos.
+                </p>
+              </div>
+
+              <p className="text-sm">
+                Em <span className="capitalize">{mesLabel(mesRef)}</span>: aberta do dia 1 ao dia{" "}
+                <strong>{limiteMes}</strong>
+                {janelaExcecao ? " (exceção deste mês)" : " (prazo padrão)"}.
+              </p>
+
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <label className="text-[11px] text-muted-foreground block">Prazo padrão (todo mês)</label>
+                  <Input
+                    type="number"
+                    min={JANELA_DIA_MIN}
+                    max={JANELA_DIA_MAX}
+                    value={diaPadrao}
+                    onChange={e => setDiaPadrao(e.target.value)}
+                    className="w-24 h-8 text-sm"
+                  />
+                </div>
+                <Button size="sm" className="h-8" disabled={salvandoJanela} onClick={() => handleSalvarJanela(JANELA_PADRAO, diaPadrao)}>
+                  Salvar padrão
+                </Button>
+                <span className="text-[11px] text-muted-foreground">{fmtAtualizacao(janelaPadrao)}</span>
+              </div>
+
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <label className="text-[11px] text-muted-foreground block capitalize">
+                    Só em {mesLabel(mesRef)}
+                  </label>
+                  <Input
+                    type="number"
+                    min={JANELA_DIA_MIN}
+                    max={JANELA_DIA_MAX}
+                    value={diaExcecao}
+                    onChange={e => setDiaExcecao(e.target.value)}
+                    placeholder={String(janelaPadrao?.dia_limite ?? JANELA_DIA_MIN)}
+                    className="w-24 h-8 text-sm"
+                  />
+                </div>
+                <Button size="sm" variant="outline" className="h-8" disabled={salvandoJanela} onClick={() => handleSalvarJanela(mesRef, diaExcecao)}>
+                  Salvar exceção do mês
+                </Button>
+                {janelaExcecao && (
+                  <Button size="sm" variant="ghost" className="h-8" disabled={salvandoJanela} onClick={handleRemoverExcecao}>
+                    Voltar ao padrão
+                  </Button>
+                )}
+                <span className="text-[11px] text-muted-foreground">{fmtAtualizacao(janelaExcecao)}</span>
+              </div>
+            </section>
+            )}
 
             {/* ---------- PARTE B: METAS ---------- */}
             <section className="border-t pt-4">

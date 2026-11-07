@@ -108,3 +108,56 @@ export function calcularTendencia(
 }
 
 export const errMsgMeta = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+// ---- JANELA DE TRANSFERÊNCIA ----
+// Até que dia do mês a carteira AGC (grandes_contas) aceita incluir, remover ou trocar
+// cliente de vendedor. 'padrao' vale para todo mês; 'YYYY-MM' é exceção daquele mês.
+// O banco aplica o prazo sozinho (gatilho trg_a_prazo_janela_agc); aqui só se lê e edita.
+
+export const JANELA_PADRAO = "padrao";
+export const JANELA_DIA_MIN = 5;
+export const JANELA_DIA_MAX = 31;
+
+export interface JanelaTransferencia {
+  mes_referencia: string;
+  dia_limite: number;
+  atualizado_por: string | null;
+  atualizado_em: string;
+}
+
+export async function fetchJanelas(): Promise<JanelaTransferencia[]> {
+  const { data, error } = await externalSupabase
+    .from("agc_janela_transferencia")
+    .select("mes_referencia, dia_limite, atualizado_por, atualizado_em");
+  if (error) throw error;
+  return (data || []) as JanelaTransferencia[];
+}
+
+/** Dia limite que vale para o mês: exceção do mês, senão o padrão, senão 5. */
+export function limiteDoMes(janelas: JanelaTransferencia[], mesRef: string): number {
+  const excecao = janelas.find(j => j.mes_referencia === mesRef);
+  if (excecao) return excecao.dia_limite;
+  return janelas.find(j => j.mes_referencia === JANELA_PADRAO)?.dia_limite ?? JANELA_DIA_MIN;
+}
+
+/** mesRef = JANELA_PADRAO altera o padrão; 'YYYY-MM' grava a exceção do mês. */
+export async function salvarJanela(mesRef: string, dia: number, usuario: string): Promise<void> {
+  const { error } = await externalSupabase.rpc("agc_definir_janela", {
+    p_mes: mesRef,
+    p_dia: dia,
+    p_usuario: usuario,
+  });
+  if (error) throw error;
+}
+
+export async function removerExcecaoJanela(mesRef: string, usuario: string): Promise<void> {
+  const { error } = await externalSupabase.rpc("agc_remover_excecao_janela", { p_mes: mesRef, p_usuario: usuario });
+  if (error) throw error;
+}
+
+/** E-mails (minúsculos) de quem pode alterar a janela — tabela agc_janela_editores. */
+export async function fetchEditoresJanela(): Promise<string[]> {
+  const { data, error } = await externalSupabase.from("agc_janela_editores").select("email");
+  if (error) throw error;
+  return (data || []).map(e => String(e.email).toLowerCase());
+}
