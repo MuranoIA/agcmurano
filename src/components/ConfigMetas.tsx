@@ -10,6 +10,7 @@ import {
   DiaUtil,
   errMsgMeta,
   fetchDiasUteis,
+  fetchEditoresJanela,
   fetchJanelas,
   fetchMetas,
   gerarDiasMes,
@@ -60,13 +61,22 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
   const [diaPadrao, setDiaPadrao] = useState("");
   const [diaExcecao, setDiaExcecao] = useState("");
   const [salvandoJanela, setSalvandoJanela] = useState(false);
+  const [editoresJanela, setEditoresJanela] = useState<string[]>([]);
+  // Só quem está em agc_janela_editores vê e altera a janela (o banco também confere).
+  const podeEditarJanela = editoresJanela.includes(usuario.trim().toLowerCase());
 
   const carregar = useCallback(async (mes: string) => {
     setLoading(true);
     try {
-      const [d, m, j] = await Promise.all([fetchDiasUteis(mes), fetchMetas(mes), fetchJanelas()]);
+      const [d, m, j, ed] = await Promise.all([
+        fetchDiasUteis(mes),
+        fetchMetas(mes),
+        fetchJanelas(),
+        fetchEditoresJanela(),
+      ]);
       setDias(d);
       setJanelas(j);
+      setEditoresJanela(ed);
       setDiaPadrao(String(j.find(x => x.mes_referencia === JANELA_PADRAO)?.dia_limite ?? JANELA_DIA_MIN));
       const exc = j.find(x => x.mes_referencia === mes);
       setDiaExcecao(exc ? String(exc.dia_limite) : "");
@@ -181,7 +191,7 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
   const handleRemoverExcecao = async () => {
     setSalvandoJanela(true);
     try {
-      await removerExcecaoJanela(mesRef);
+      await removerExcecaoJanela(mesRef, usuario);
       toast.success(`${mesLabel(mesRef)} volta a seguir o prazo padrão.`);
       await carregar(mesRef);
     } catch (err) {
@@ -200,7 +210,7 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>⚙️ Metas, dias úteis e janela de transferência</DialogTitle>
+          <DialogTitle>⚙️ Metas e dias úteis</DialogTitle>
         </DialogHeader>
 
         {/* Seletor de mês */}
@@ -296,6 +306,7 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
             </section>
 
             {/* ---------- PARTE C: JANELA DE TRANSFERÊNCIA ---------- */}
+            {podeEditarJanela && (
             <section className="border-t pt-4 space-y-3">
               <div>
                 <h4 className="text-sm font-semibold">Janela de transferência da carteira</h4>
@@ -355,6 +366,7 @@ const ConfigMetas: React.FC<Props> = ({ open, onOpenChange, usuario, onSaved }) 
                 <span className="text-[11px] text-muted-foreground">{fmtAtualizacao(janelaExcecao)}</span>
               </div>
             </section>
+            )}
 
             {/* ---------- PARTE B: METAS ---------- */}
             <section className="border-t pt-4">

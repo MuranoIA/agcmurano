@@ -150,7 +150,14 @@ export async function salvarJanela(mesRef: string, dia: number, usuario: string)
   if (error) throw error;
 }
 
-export async function removerExcecaoJanela(mesRef: string): Promise<void> {
-  const { error } = await externalSupabase.rpc("agc_remover_excecao_janela", { p_mes: mesRef });
+export async function removerExcecaoJanela(mesRef: string, usuario: string): Promise<void> {
+  const { error } = await externalSupabase.rpc("agc_remover_excecao_janela", { p_mes: mesRef, p_usuario: usuario });
   if (error) throw error;
+}
+
+/** E-mails (minúsculos) de quem pode alterar a janela — tabela agc_janela_editores. */
+export async function fetchEditoresJanela(): Promise<string[]> {
+  const { data, error } = await externalSupabase.from("agc_janela_editores").select("email");
+  if (error) throw error;
+  return (data || []).map(e => String(e.email).toLowerCase());
 }
